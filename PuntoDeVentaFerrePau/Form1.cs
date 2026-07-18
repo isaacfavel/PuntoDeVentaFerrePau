@@ -1,0 +1,882 @@
+﻿using System;
+using System.Drawing;
+using System.Windows.Forms;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
+using System.Drawing.Printing;
+
+namespace PuntoDeVentaFerrePau
+{
+    public partial class Form1 : Form
+    {
+        // --- CONEXIÓN A SUPABASE ---
+        private static readonly string SupabaseUrl = "https://pttcycyawmylaxdhlnit.supabase.co";
+        private static readonly string SupabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0dGN5Y3lhd215bGF4ZGhsbml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5ODkxOTUsImV4cCI6MjA5OTU2NTE5NX0.ja9Hs1bebABoMlnDdUROhR0g5AACjCEnupwgAnWA2fE";
+        private static readonly HttpClient clienteHttp = new HttpClient();
+
+        private double totalVentaAcumulado = 0.0;
+
+        // --- NUEVAS VARIABLES PARA EL TICKET ---
+        private string ultimoFolio = "";
+        private double ultimoPago = 0.0;
+        private double ultimoCambio = 0.0;
+
+        // --- VARIABLES PARA EL TICKET DE CORTE DE CAJA ---
+        private string corteFecha = "";
+        private int corteTickets = 0;
+        private double corteTotal = 0.0;
+
+        // --- BOTÓN PARA REIMPRIMIR ÚLTIMO TICKET ---
+        private Button btnReimprimirUltimo = new Button();
+
+        // Guardamos el nombre del cajero que inició sesión
+        private string nombreCajeroActual = "";
+
+        public Form1(string cajero)
+        {
+            InitializeComponent();
+            this.WindowState = FormWindowState.Maximized;
+            this.nombreCajeroActual = cajero; // Lo recibimos desde el Login
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            AplicarTemaFerrePau();
+            ConfigurarTabla();
+        }
+
+        private void AplicarTemaFerrePau()
+        {
+            this.Icon = new Icon(@"C:\Users\chino\source\repos\PuntoDeVentaFerrePau\PuntoDeVentaFerrePau\logo1 (1).ico");
+            // --- NUEVA PALETA DE COLORES (ESTILO APP MÓVIL) ---
+            Color fondoApp = Color.FromArgb(244, 246, 249);       // Fondo gris/azul muy claro
+            Color azulMarino = Color.FromArgb(32, 54, 97);        // Azul oscuro para títulos
+            Color naranjaFerre = Color.FromArgb(244, 114, 22);    // Naranja de los botones
+            Color blancoCard = Color.White;                       // Blanco para las cajas de texto
+            Color textoGris = Color.FromArgb(120, 120, 120);      // Gris para textos secundarios
+            Color textoOscuro = Color.FromArgb(40, 40, 40);       // Casi negro para lo que se escribe
+
+            // Aplicamos el fondo claro a toda la ventana
+            this.BackColor = fondoApp;
+
+            // Etiquetas Superiores
+            lblTitulo.Text = "FERRE PAU";
+            lblTitulo.Font = new Font("Arial", 40, FontStyle.Bold);
+            lblTitulo.ForeColor = azulMarino;
+            lblTitulo.Location = new Point(20, 20);
+
+            lblCajero.Text = "CAJERO: " + nombreCajeroActual.ToUpper();
+            lblCajero.Font = new Font("Arial", 12, FontStyle.Bold);
+            lblCajero.ForeColor = textoGris;
+            lblCajero.Location = new Point(this.ClientSize.Width - 300, 20);
+            lblCajero.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+
+            // --- ETIQUETA ARRIBA DEL BUSCADOR ---
+            Label lblInstruccionBuscar = new Label();
+            lblInstruccionBuscar.Text = "CÓDIGO DE PRODUCTO (ESCANEADO O F3)";
+            lblInstruccionBuscar.Font = new Font("Arial", 9, FontStyle.Bold);
+            lblInstruccionBuscar.ForeColor = textoGris;
+            lblInstruccionBuscar.Location = new Point(20, 80);
+            lblInstruccionBuscar.AutoSize = true;
+            this.Controls.Add(lblInstruccionBuscar);
+
+            // Caja de texto (Buscador)
+            txtCodigo.BackColor = blancoCard;
+            txtCodigo.ForeColor = textoOscuro;
+            txtCodigo.Font = new Font("Arial", 18);
+            txtCodigo.BorderStyle = BorderStyle.FixedSingle;
+            txtCodigo.Width = 500;
+            txtCodigo.Location = new Point(20, 100);
+
+            // Botón Cobrar (F12) - Estilo Naranja
+            btnCobrar.Text = "F12 - COBRAR";
+            btnCobrar.BackColor = naranjaFerre;
+            btnCobrar.ForeColor = Color.White;
+            btnCobrar.Font = new Font("Arial", 16, FontStyle.Bold);
+            btnCobrar.FlatStyle = FlatStyle.Flat;
+            btnCobrar.FlatAppearance.BorderSize = 0;
+            btnCobrar.Size = new Size(200, 60);
+            btnCobrar.Location = new Point(this.ClientSize.Width - 220, this.ClientSize.Height - 80);
+            btnCobrar.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+
+            // --- TOTAL A PAGAR (NUEVO DISEÑO GIGANTE SIN LETRAS) ---
+            lblTotal.Text = "$ 0.00";
+            lblTotal.Font = new Font("Arial", 48, FontStyle.Bold);
+            lblTotal.ForeColor = azulMarino;
+            lblTotal.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            lblTotal.AutoSize = true;
+            lblTotal.Location = new Point(btnCobrar.Left - 350, btnCobrar.Top - 10);
+
+            // --- CONFIGURACIÓN DEL BOTÓN DE REIMPRIMIR ÚLTIMO TICKET ---
+            btnReimprimirUltimo.Text = "REIMPRIMIR ÚLTIMO TICKET";
+            btnReimprimirUltimo.BackColor = azulMarino;
+            btnReimprimirUltimo.ForeColor = Color.White;
+            btnReimprimirUltimo.Font = new Font("Arial", 10, FontStyle.Bold);
+            btnReimprimirUltimo.FlatStyle = FlatStyle.Flat;
+            btnReimprimirUltimo.FlatAppearance.BorderSize = 0;
+            btnReimprimirUltimo.Size = new Size(250, 40);
+            btnReimprimirUltimo.Location = new Point(20, this.ClientSize.Height - 60);
+            btnReimprimirUltimo.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnReimprimirUltimo.Click += BtnReimprimirUltimo_Click;
+
+            if (!this.Controls.Contains(btnReimprimirUltimo))
+            {
+                this.Controls.Add(btnReimprimirUltimo);
+            }
+
+            // --- DISEÑO DE LA TABLA ESTILO LIGHT ---
+            dgvCarrito.BackgroundColor = fondoApp;
+            dgvCarrito.BorderStyle = BorderStyle.None;
+            dgvCarrito.EnableHeadersVisualStyles = false;
+
+            // Cabeceras de la tabla en Azul Marino
+            dgvCarrito.ColumnHeadersDefaultCellStyle.BackColor = azulMarino;
+            dgvCarrito.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvCarrito.ColumnHeadersDefaultCellStyle.Font = new Font("Arial", 12, FontStyle.Bold);
+            dgvCarrito.ColumnHeadersDefaultCellStyle.SelectionBackColor = azulMarino;
+
+            // Filas blancas con texto oscuro
+            dgvCarrito.DefaultCellStyle.BackColor = blancoCard;
+            dgvCarrito.DefaultCellStyle.ForeColor = textoOscuro;
+            dgvCarrito.DefaultCellStyle.Font = new Font("Arial", 11);
+
+            // Filas alternas con un gris súper clarito para leer mejor
+            dgvCarrito.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248);
+            dgvCarrito.RowHeadersVisible = false;
+            dgvCarrito.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+
+            dgvCarrito.Location = new Point(20, 160);
+            dgvCarrito.Size = new Size(this.ClientSize.Width - 40, this.ClientSize.Height - 260);
+            dgvCarrito.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+
+            // Color de selección
+            dgvCarrito.DefaultCellStyle.SelectionBackColor = Color.FromArgb(255, 230, 210);
+            dgvCarrito.DefaultCellStyle.SelectionForeColor = azulMarino;
+        }
+
+        private void ConfigurarTabla()
+        {
+            dgvCarrito.Columns.Clear();
+            dgvCarrito.Columns.Add("Codigo", "CÓDIGO");
+            dgvCarrito.Columns.Add("Descripcion", "DESCRIPCIÓN");
+            dgvCarrito.Columns.Add("Precio", "PRECIO");
+            dgvCarrito.Columns.Add("Cantidad", "CANTIDAD");
+            dgvCarrito.Columns.Add("Total", "TOTAL");
+            dgvCarrito.Columns.Add("Stock", "EXISTENCIA");
+
+            dgvCarrito.ReadOnly = true;
+            dgvCarrito.AllowUserToAddRows = false;
+            dgvCarrito.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvCarrito.MultiSelect = false;
+            dgvCarrito.AllowUserToDeleteRows = false;
+
+            // --- NUEVO: FILAS MÁS ALTAS Y NÚMEROS CENTRADOS ---
+            dgvCarrito.RowTemplate.Height = 40;
+            dgvCarrito.Columns["Precio"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dgvCarrito.Columns["Cantidad"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dgvCarrito.Columns["Total"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dgvCarrito.Columns["Stock"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+
+            foreach (DataGridViewColumn columna in dgvCarrito.Columns)
+            {
+                columna.SortMode = DataGridViewColumnSortMode.NotSortable;
+            }
+        }
+
+        private async void txtCodigo_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                string codigo = txtCodigo.Text.Trim();
+                if (!string.IsNullOrEmpty(codigo))
+                {
+                    txtCodigo.Enabled = false;
+                    await BuscarYAgregarProductoApi(codigo);
+                    txtCodigo.Enabled = true;
+                    txtCodigo.Text = "";
+                    txtCodigo.Focus();
+                }
+            }
+            else if (e.KeyCode == Keys.Delete)
+            {
+                if (string.IsNullOrEmpty(txtCodigo.Text.Trim())) BorrarFilaSeleccionada();
+            }
+            else if (e.KeyCode == Keys.Up)
+            {
+                e.Handled = true;
+                MoverSeleccionArriba();
+            }
+            else if (e.KeyCode == Keys.Down)
+            {
+                e.Handled = true;
+                MoverSeleccionAbajo();
+            }
+            // --- TECLAS PARA SUMAR Y RESTAR (+) y (-) ---
+            else if ((e.KeyCode == Keys.Add || e.KeyCode == Keys.Oemplus) && string.IsNullOrEmpty(txtCodigo.Text.Trim()))
+            {
+                e.SuppressKeyPress = true;
+                CambiarCantidadSeleccionada(1);
+            }
+            else if ((e.KeyCode == Keys.Subtract || e.KeyCode == Keys.OemMinus) && string.IsNullOrEmpty(txtCodigo.Text.Trim()))
+            {
+                e.SuppressKeyPress = true;
+                CambiarCantidadSeleccionada(-1);
+            }
+
+            // --- TECLA F12 PARA COBRAR ---
+            else if (e.KeyCode == Keys.F12)
+            {
+                e.Handled = true;
+                if (totalVentaAcumulado > 0)
+                {
+                    FormCobro ventanaCobro = new FormCobro(totalVentaAcumulado);
+                    ventanaCobro.ShowDialog();
+
+                    if (ventanaCobro.PagoConfirmado)
+                    {
+                        MessageBox.Show("Venta registrada correctamente.", "Éxito");
+
+                        await ActualizarInventarioSupabase();
+                        string idNuevaVenta = await RegistrarVentaSupabase(totalVentaAcumulado);
+
+                        if (idNuevaVenta != "ERROR")
+                        {
+                            ultimoFolio = idNuevaVenta;
+                            // ... (tus otras asignaciones de variables)
+
+                            // --- LA DECISIÓN DE LOS DOS BOTONES ---
+                            if (ventanaCobro.ImprimirTicket)
+                            {
+                                ImprimirYGuardarTicket(idNuevaVenta); // Imprime y guarda
+                            }
+                            else
+                            {
+                                GuardarTicketPDFSolo(idNuevaVenta);   // Solo guarda en la carpeta
+                            }
+                        }
+
+                        dgvCarrito.Rows.Clear();
+                        totalVentaAcumulado = 0;
+                        lblTotal.Text = "$ 0.00";
+                    }
+                }
+            }
+            // --- NUEVO: TECLA F1 PARA AYUDA RÁPIDA ---
+            else if (e.KeyCode == Keys.F1)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                FormAyuda ventanaAyuda = new FormAyuda();
+                ventanaAyuda.ShowDialog();
+
+                txtCodigo.Focus();
+            }
+            // --- TECLA F3 PARA BUSCAR POR NOMBRE ---
+            else if (e.KeyCode == Keys.F3)
+            {
+                e.Handled = true;
+                FormBuscarProducto ventanaBuscar = new FormBuscarProducto();
+                ventanaBuscar.ShowDialog();
+
+                if (!string.IsNullOrEmpty(ventanaBuscar.IdProductoSeleccionado))
+                {
+                    txtCodigo.Enabled = false;
+                    await BuscarYAgregarProductoApi(ventanaBuscar.IdProductoSeleccionado);
+                    txtCodigo.Enabled = true;
+                    txtCodigo.Focus();
+                }
+            }
+            // --- TECLA F4 PARA ALTA DE PRODUCTOS ---
+            else if (e.KeyCode == Keys.F4)
+            {
+                e.Handled = true;
+                FormAgregarProducto ventanaAgregar = new FormAgregarProducto();
+                ventanaAgregar.ShowDialog();
+
+                txtCodigo.Focus();
+            }
+            // --- TECLA F5 PARA ACTUALIZAR PRECIOS O STOCK ---
+            else if (e.KeyCode == Keys.F5)
+            {
+                e.Handled = true;
+                FormModificarProducto ventanaModificar = new FormModificarProducto();
+                ventanaModificar.ShowDialog();
+
+                txtCodigo.Focus();
+            }
+            // --- TECLA F6 PARA REPORTE DE INVENTARIO BAJO ---
+            else if (e.KeyCode == Keys.F6)
+            {
+                e.Handled = true;
+                FormInventarioBajo ventanaInventario = new FormInventarioBajo();
+                ventanaInventario.ShowDialog();
+
+                txtCodigo.Focus();
+            }
+            // --- TECLA F7 PARA REIMPRIMIR TICKETS ---
+            else if (e.KeyCode == Keys.F7)
+            {
+                e.Handled = true;
+                FormReimprimirTicket ventanaReimprimir = new FormReimprimirTicket();
+                ventanaReimprimir.ShowDialog();
+
+                txtCodigo.Focus();
+            }
+            // --- TECLA F8 PARA HISTORIAL DE VENTAS ---
+            else if (e.KeyCode == Keys.F8)
+            {
+                e.Handled = true;
+                FormHistorialVentas ventanaHistorial = new FormHistorialVentas();
+                ventanaHistorial.ShowDialog();
+
+                txtCodigo.Focus();
+            }
+            // --- F9: DAR DE BAJA PRODUCTO ---
+            else if (e.KeyCode == Keys.F9)
+            {
+                e.Handled = true;
+                FormDarDeBajaProducto ventanaBaja = new FormDarDeBajaProducto();
+                ventanaBaja.ShowDialog();
+            }
+            // --- TECLA F10 PARA CORTE DE CAJA ---
+            else if (e.KeyCode == Keys.F10)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                await RealizarCorteDeCaja();
+            }
+        }
+
+        private void MoverSeleccionArriba()
+        {
+            if (dgvCarrito.Rows.Count > 0 && dgvCarrito.SelectedRows.Count > 0)
+            {
+                int indexActual = dgvCarrito.SelectedRows[0].Index;
+                if (indexActual > 0)
+                {
+                    dgvCarrito.ClearSelection();
+                    dgvCarrito.Rows[indexActual - 1].Selected = true;
+                    dgvCarrito.FirstDisplayedScrollingRowIndex = indexActual - 1;
+                }
+            }
+        }
+
+        private void MoverSeleccionAbajo()
+        {
+            if (dgvCarrito.Rows.Count > 0 && dgvCarrito.SelectedRows.Count > 0)
+            {
+                int indexActual = dgvCarrito.SelectedRows[0].Index;
+                if (indexActual < dgvCarrito.Rows.Count - 1)
+                {
+                    dgvCarrito.ClearSelection();
+                    dgvCarrito.Rows[indexActual + 1].Selected = true;
+                    dgvCarrito.FirstDisplayedScrollingRowIndex = indexActual + 1;
+                }
+            }
+        }
+
+        private async Task BuscarYAgregarProductoApi(string idProducto)
+        {
+            try
+            {
+                string url = $"{SupabaseUrl}/rest/v1/producto?id=eq.{idProducto}&select=descripcion,precio,cantidad";
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Add("apikey", SupabaseKey);
+                request.Headers.Add("Authorization", $"Bearer {SupabaseKey}");
+
+                HttpResponseMessage response = await clienteHttp.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    string jsonRespuesta = await response.Content.ReadAsStringAsync();
+                    JArray arregloProductos = JArray.Parse(jsonRespuesta);
+
+                    if (arregloProductos.Count > 0)
+                    {
+                        JObject producto = (JObject)arregloProductos[0];
+                        string desc = producto["descripcion"].ToString();
+                        double precio = Convert.ToDouble(producto["precio"]);
+                        int stock = Convert.ToInt32(producto["cantidad"]);
+
+                        if (stock <= 0)
+                        {
+                            MessageBox.Show("¡Producto agotado!", "Alerta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        bool productoEncontrado = false;
+                        foreach (DataGridViewRow fila in dgvCarrito.Rows)
+                        {
+                            if (fila.Cells[0].Value != null && fila.Cells[0].Value.ToString() == idProducto)
+                            {
+                                int cantActual = Convert.ToInt32(fila.Cells[3].Value);
+                                if (cantActual + 1 > stock)
+                                {
+                                    MessageBox.Show("¡Stock insuficiente!", "Alerta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                    return;
+                                }
+                                fila.Cells[3].Value = cantActual + 1;
+                                fila.Cells[4].Value = $"$ {(cantActual + 1) * precio:F2}";
+
+                                dgvCarrito.ClearSelection();
+                                fila.Selected = true;
+                                productoEncontrado = true;
+                                break;
+                            }
+                        }
+
+                        if (!productoEncontrado)
+                        {
+                            int index = dgvCarrito.Rows.Add(idProducto, desc, $"$ {precio:F2}", 1, $"$ {precio:F2}", stock);
+                            dgvCarrito.ClearSelection();
+                            dgvCarrito.Rows[index].Selected = true;
+                        }
+
+                        totalVentaAcumulado += precio;
+                        lblTotal.Text = $"$ {totalVentaAcumulado:F2}"; // Modificado sin letras
+                    }
+                }
+            }
+            catch (Exception ex) { MessageBox.Show($"Error: {ex.Message}"); }
+        }
+
+        private void dgvCarrito_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Delete)
+            {
+                BorrarFilaSeleccionada();
+            }
+            else if (e.KeyCode == Keys.Add || e.KeyCode == Keys.Oemplus)
+            {
+                CambiarCantidadSeleccionada(1);
+            }
+            else if (e.KeyCode == Keys.Subtract || e.KeyCode == Keys.OemMinus)
+            {
+                CambiarCantidadSeleccionada(-1);
+            }
+        }
+
+        private void BorrarFilaSeleccionada()
+        {
+            if (dgvCarrito.SelectedRows.Count > 0)
+            {
+                int indexBorrar = dgvCarrito.SelectedRows[0].Index;
+                DataGridViewRow fila = dgvCarrito.SelectedRows[0];
+
+                double totalRestar = Convert.ToDouble(fila.Cells[4].Value.ToString().Replace("$", "").Trim());
+                totalVentaAcumulado -= totalRestar;
+                if (totalVentaAcumulado < 0) totalVentaAcumulado = 0;
+                lblTotal.Text = $"$ {totalVentaAcumulado:F2}"; // Modificado sin letras
+
+                dgvCarrito.Rows.Remove(fila);
+
+                if (dgvCarrito.Rows.Count > 0)
+                {
+                    int nuevoIndex = (indexBorrar > 0) ? indexBorrar - 1 : 0;
+                    dgvCarrito.ClearSelection();
+                    dgvCarrito.Rows[nuevoIndex].Selected = true;
+                }
+
+                txtCodigo.Focus();
+            }
+        }
+
+        // MÉTODO PARA SUMAR O RESTAR CANTIDAD CON LAS TECLAS + Y -
+        private void CambiarCantidadSeleccionada(int ajuste)
+        {
+            if (dgvCarrito.SelectedRows.Count > 0)
+            {
+                DataGridViewRow fila = dgvCarrito.SelectedRows[0];
+
+                int cantidadActual = Convert.ToInt32(fila.Cells[3].Value);
+                int stock = Convert.ToInt32(fila.Cells[5].Value);
+
+                string precioTexto = fila.Cells[2].Value.ToString().Replace("$", "").Trim();
+                double precioUnitario = Convert.ToDouble(precioTexto);
+
+                int nuevaCantidad = cantidadActual + ajuste;
+
+                if (nuevaCantidad > stock)
+                {
+                    MessageBox.Show($"¡Stock insuficiente! Solo hay {stock} piezas disponibles.", "Alerta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (nuevaCantidad <= 0)
+                {
+                    return;
+                }
+
+                fila.Cells[3].Value = nuevaCantidad;
+
+                double nuevoTotalFila = nuevaCantidad * precioUnitario;
+                fila.Cells[4].Value = $"$ {nuevoTotalFila:F2}";
+
+                if (ajuste > 0)
+                {
+                    totalVentaAcumulado += precioUnitario;
+                }
+                else
+                {
+                    totalVentaAcumulado -= precioUnitario;
+                }
+
+                if (totalVentaAcumulado < 0) totalVentaAcumulado = 0;
+                lblTotal.Text = $"$ {totalVentaAcumulado:F2}"; // Modificado sin letras
+            }
+        }
+
+        private async Task ActualizarInventarioSupabase()
+        {
+            try
+            {
+                foreach (DataGridViewRow fila in dgvCarrito.Rows)
+                {
+                    string idProducto = fila.Cells[0].Value.ToString();
+                    int cantidadVendida = Convert.ToInt32(fila.Cells[3].Value);
+                    int stockActual = Convert.ToInt32(fila.Cells[5].Value);
+
+                    int nuevoStock = stockActual - cantidadVendida;
+
+                    string url = $"{SupabaseUrl}/rest/v1/producto?id=eq.{idProducto}";
+
+                    JObject actualizacion = new JObject();
+                    actualizacion["cantidad"] = nuevoStock;
+
+                    var request = new HttpRequestMessage(new HttpMethod("PATCH"), url);
+                    request.Headers.Add("apikey", SupabaseKey);
+                    request.Headers.Add("Authorization", $"Bearer {SupabaseKey}");
+
+                    request.Content = new StringContent(actualizacion.ToString(), System.Text.Encoding.UTF8, "application/json");
+
+                    await clienteHttp.SendAsync(request);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Hubo un error al actualizar el inventario: {ex.Message}", "Error de Nube", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task<string> RegistrarVentaSupabase(double totalPagado)
+        {
+            try
+            {
+                string url = $"{SupabaseUrl}/rest/v1/venta";
+                DateTime ahora = DateTime.Now;
+
+                JObject nuevaVenta = new JObject();
+                nuevaVenta["fecha"] = ahora.ToString("dd/MM/yyyy");
+                nuevaVenta["hora"] = ahora.ToString("HH:mm:ss");
+                nuevaVenta["total"] = totalPagado;
+
+                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Headers.Add("apikey", SupabaseKey);
+                request.Headers.Add("Authorization", $"Bearer {SupabaseKey}");
+                request.Headers.Add("Prefer", "return=representation");
+
+                request.Content = new StringContent(nuevaVenta.ToString(), System.Text.Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await clienteHttp.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    string detalleError = await response.Content.ReadAsStringAsync();
+                    MessageBox.Show($"Supabase rechazó la venta.\n\nError exacto: {detalleError}", "Falla en la Nube", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return "ERROR";
+                }
+                else
+                {
+                    string jsonRespuesta = await response.Content.ReadAsStringAsync();
+                    JArray arregloVenta = JArray.Parse(jsonRespuesta);
+                    if (arregloVenta.Count > 0)
+                    {
+                        JObject ventaGenerada = (JObject)arregloVenta[0];
+                        return ventaGenerada["id"].ToString();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error interno al guardar: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            return "ERROR";
+        }
+
+        // MÉTODO QUE DISPARA LA IMPRESIÓN
+        private void ImprimirYGuardarTicket(string idVenta)
+        {
+            string rutaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string rutaCarpeta = System.IO.Path.Combine(rutaDocumentos, "Tickets_FerrePau");
+
+            if (!System.IO.Directory.Exists(rutaCarpeta))
+            {
+                System.IO.Directory.CreateDirectory(rutaCarpeta);
+            }
+
+            string nombreArchivo = System.IO.Path.Combine(rutaCarpeta, $"Ticket_{idVenta}.pdf");
+
+            PrintDocument pd = new PrintDocument();
+
+            pd.DefaultPageSettings.PaperSize = new PaperSize("TicketTermico", 300, 600);
+            pd.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+
+            pd.PrintPage += new PrintPageEventHandler(GenerarDiseñoTicket);
+
+            try
+            {
+                pd.PrinterSettings.PrinterName = "Microsoft Print to PDF";
+                pd.PrinterSettings.PrintToFile = true;
+                pd.PrinterSettings.PrintFileName = nombreArchivo;
+
+                pd.Print();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"No se pudo guardar el PDF del ticket: {ex.Message}", "Error de Impresión", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // MÉTODO QUE DIBUJA EL TICKET LÍNEA POR LÍNEA
+        private void GenerarDiseñoTicket(object sender, PrintPageEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            Font fontTitulo = new Font("Arial", 12, FontStyle.Bold);
+            Font fontNormal = new Font("Arial", 9);
+            Font fontNegrita = new Font("Arial", 9, FontStyle.Bold);
+
+            int y = 20;
+            int x = 10;
+
+            g.DrawString("FERRE PAU", fontTitulo, Brushes.Black, new PointF(x + 60, y));
+            y += 25;
+
+            g.DrawString("Folio: " + ultimoFolio, fontNegrita, Brushes.Black, new PointF(x, y));
+            y += 20;
+
+            g.DrawString("Fecha: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm"), fontNormal, Brushes.Black, new PointF(x, y));
+            y += 20;
+            g.DrawString("Le atendió: " + lblCajero.Text.Replace("CAJERO: ", "").Trim(), fontNormal, Brushes.Black, new PointF(x, y));
+            y += 20;
+            g.DrawString("------------------------------------------------", fontNormal, Brushes.Black, new PointF(x, y));
+            y += 20;
+
+            g.DrawString("CANT   DESCRIPCIÓN            TOTAL", fontNegrita, Brushes.Black, new PointF(x, y));
+            y += 20;
+
+            foreach (DataGridViewRow fila in dgvCarrito.Rows)
+            {
+                string cant = fila.Cells[3].Value.ToString();
+                string desc = fila.Cells[1].Value.ToString();
+                string totalFila = fila.Cells[4].Value.ToString();
+
+                if (desc.Length > 16) desc = desc.Substring(0, 16) + ".";
+
+                g.DrawString($"{cant}   {desc}", fontNormal, Brushes.Black, new PointF(x, y));
+                g.DrawString(totalFila, fontNormal, Brushes.Black, new PointF(x + 190, y));
+                y += 20;
+            }
+
+            y += 10;
+            g.DrawString("------------------------------------------------", fontNormal, Brushes.Black, new PointF(x, y));
+            y += 20;
+            g.DrawString("TOTAL: $" + totalVentaAcumulado.ToString("F2"), fontTitulo, Brushes.Black, new PointF(x + 80, y));
+            y += 25;
+
+            g.DrawString("Efectivo: $" + ultimoPago.ToString("F2"), fontNormal, Brushes.Black, new PointF(x + 80, y));
+            y += 15;
+            g.DrawString("Cambio: $" + ultimoCambio.ToString("F2"), fontNormal, Brushes.Black, new PointF(x + 80, y));
+            y += 30;
+
+            g.DrawString("¡Gracias por su preferencia!", fontNormal, Brushes.Black, new PointF(x + 30, y));
+        }
+
+        // --- MÉTODOS PARA EL CORTE DE CAJA (F10) ---
+        private async Task RealizarCorteDeCaja()
+        {
+            try
+            {
+                string fechaHoy = DateTime.Now.ToString("dd/MM/yyyy");
+
+                string url = $"{SupabaseUrl}/rest/v1/venta?fecha=eq.{Uri.EscapeDataString(fechaHoy)}&select=total";
+
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Add("apikey", SupabaseKey);
+                request.Headers.Add("Authorization", $"Bearer {SupabaseKey}");
+
+                HttpResponseMessage response = await clienteHttp.SendAsync(request);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string jsonRespuesta = await response.Content.ReadAsStringAsync();
+                    JArray ventasDeHoy = JArray.Parse(jsonRespuesta);
+
+                    double totalCaja = 0;
+                    int cantidadVentas = ventasDeHoy.Count;
+
+                    foreach (JObject venta in ventasDeHoy)
+                    {
+                        totalCaja += Convert.ToDouble(venta["total"]);
+                    }
+
+                    DialogResult resultado = MessageBox.Show(
+                        $"--- RESUMEN DEL DÍA ---\n\n" +
+                        $"Fecha: {fechaHoy}\n" +
+                        $"Tickets Emitidos: {cantidadVentas}\n" +
+                        $"Total en Caja: $ {totalCaja:F2}\n\n" +
+                        $"¿Deseas imprimir y guardar el Ticket de Corte de Caja?",
+                        "F10 - Corte de Caja",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Information);
+
+                    if (resultado == DialogResult.Yes)
+                    {
+                        ImprimirTicketCorte(fechaHoy, cantidadVentas, totalCaja);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("No se pudo obtener la información de Supabase.", "Error de Red", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ocurrió un error al hacer el corte: {ex.Message}");
+            }
+        }
+
+        private void ImprimirTicketCorte(string fecha, int tickets, double total)
+        {
+            corteFecha = fecha;
+            corteTickets = tickets;
+            corteTotal = total;
+
+            System.Drawing.Printing.PrintDocument pdCorte = new System.Drawing.Printing.PrintDocument();
+
+            pdCorte.DefaultPageSettings.PaperSize = new System.Drawing.Printing.PaperSize("TicketTermico", 300, 600);
+            pdCorte.DefaultPageSettings.Margins = new System.Drawing.Printing.Margins(0, 0, 0, 0);
+
+            pdCorte.PrintPage += new System.Drawing.Printing.PrintPageEventHandler(GenerarDiseñoCorte);
+
+            string rutaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string rutaCarpeta = System.IO.Path.Combine(rutaDocumentos, "Tickets_FerrePau");
+            if (!System.IO.Directory.Exists(rutaCarpeta)) System.IO.Directory.CreateDirectory(rutaCarpeta);
+
+            string fechaArchivo = fecha.Replace("/", "-");
+            string nombreArchivo = System.IO.Path.Combine(rutaCarpeta, $"CorteCaja_{fechaArchivo}.pdf");
+
+            try
+            {
+                pdCorte.PrinterSettings.PrinterName = "Microsoft Print to PDF";
+                pdCorte.PrinterSettings.PrintToFile = true;
+                pdCorte.PrinterSettings.PrintFileName = nombreArchivo;
+                pdCorte.Print();
+
+                MessageBox.Show("El Corte de Caja se ha guardado exitosamente en tus Documentos.", "Corte Finalizado", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al guardar el corte: {ex.Message}");
+            }
+        }
+
+        private void GenerarDiseñoCorte(object sender, System.Drawing.Printing.PrintPageEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            Font fontTitulo = new Font("Arial", 14, FontStyle.Bold);
+            Font fontNormal = new Font("Arial", 10);
+            Font fontNegrita = new Font("Arial", 10, FontStyle.Bold);
+
+            int y = 20;
+            int x = 10;
+
+            g.DrawString("FERRE PAU", fontTitulo, Brushes.Black, new PointF(x + 50, y));
+            y += 30;
+            g.DrawString("CORTE DE CAJA", fontNegrita, Brushes.Black, new PointF(x + 40, y));
+            y += 20;
+            g.DrawString("------------------------------------------------", fontNormal, Brushes.Black, new PointF(x, y));
+            y += 20;
+            g.DrawString("Fecha del corte: " + corteFecha, fontNormal, Brushes.Black, new PointF(x, y));
+            y += 20;
+            g.DrawString("Hora de impresión: " + DateTime.Now.ToString("HH:mm:ss"), fontNormal, Brushes.Black, new PointF(x, y));
+            y += 20;
+            g.DrawString("Cajero: " + lblCajero.Text.Replace("CAJERO: ", "").Trim(), fontNormal, Brushes.Black, new PointF(x, y));
+            y += 20;
+            g.DrawString("------------------------------------------------", fontNormal, Brushes.Black, new PointF(x, y));
+            y += 30;
+
+            g.DrawString("Total de Tickets: " + corteTickets, fontNormal, Brushes.Black, new PointF(x, y));
+            y += 40;
+            g.DrawString("TOTAL EN CAJA:", fontNegrita, Brushes.Black, new PointF(x, y));
+            y += 25;
+            g.DrawString("$ " + corteTotal.ToString("F2"), new Font("Arial", 18, FontStyle.Bold), Brushes.Black, new PointF(x + 40, y));
+            y += 50;
+
+            g.DrawString("------------------------------------------------", fontNormal, Brushes.Black, new PointF(x, y));
+            y += 20;
+            g.DrawString("Firma del Cajero", fontNormal, Brushes.Black, new PointF(x + 45, y));
+        }
+
+        // --- NUEVO MÉTODO PARA REIMPRIMIR EL ÚLTIMO TICKET ---
+        private void BtnReimprimirUltimo_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(ultimoFolio))
+            {
+                MessageBox.Show("Aún no se ha realizado ninguna venta en esta sesión.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                txtCodigo.Focus();
+                return;
+            }
+
+            string rutaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string rutaCarpeta = System.IO.Path.Combine(rutaDocumentos, "Tickets_FerrePau");
+            string rutaArchivo = System.IO.Path.Combine(rutaCarpeta, $"Ticket_{ultimoFolio}.pdf");
+
+            if (System.IO.File.Exists(rutaArchivo))
+            {
+                try
+                {
+                    System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = rutaArchivo,
+                        UseShellExecute = true
+                    };
+                    System.Diagnostics.Process.Start(psi);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"No se pudo abrir el archivo. Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            else
+            {
+                MessageBox.Show($"No se encontró el archivo del último ticket (Folio: {ultimoFolio}).", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
+            txtCodigo.Focus();
+        }
+        private void GuardarTicketPDFSolo(string idVenta)
+        {
+            // Esta parte es igual que tu método de impresión original
+            string rutaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string rutaCarpeta = System.IO.Path.Combine(rutaDocumentos, "Tickets_FerrePau");
+            if (!System.IO.Directory.Exists(rutaCarpeta)) System.IO.Directory.CreateDirectory(rutaCarpeta);
+            string nombreArchivo = System.IO.Path.Combine(rutaCarpeta, $"Ticket_{idVenta}.pdf");
+
+            PrintDocument pd = new PrintDocument();
+            pd.DefaultPageSettings.PaperSize = new PaperSize("TicketTermico", 300, 600);
+            pd.PrintPage += new PrintPageEventHandler(GenerarDiseñoTicket);
+
+            try
+            {
+                pd.PrinterSettings.PrinterName = "Microsoft Print to PDF";
+                pd.PrinterSettings.PrintToFile = true;
+                pd.PrinterSettings.PrintFileName = nombreArchivo;
+                // --- AQUÍ LA DIFERENCIA ---
+                // Si no queremos diálogo de guardado, lo ejecutamos directo si el driver lo permite
+                pd.Print();
+            }
+            catch { /* Silencioso */ }
+        }
+    }
+}
