@@ -661,15 +661,17 @@ namespace PuntoDeVentaFerrePau
         private void ImprimirYGuardarTicket(string idVenta, bool imprimirFisico)
         {
             // PASO A: MANDAR A LA IMPRESORA FÍSICA (SOLO SI ELIGIÓ "COBRAR CON TICKET")
+            // PASO A: MANDAR A LA IMPRESORA FÍSICA (SOLO SI ELIGIÓ "COBRAR CON TICKET")
             if (imprimirFisico)
             {
                 try
                 {
                     PrintDocument pdFisico = new PrintDocument();
-                    pdFisico.DefaultPageSettings.PaperSize = new PaperSize("TicketTermico", 300, 600);
+
+                    // --- CORRECCIÓN: Cambiamos 300 a 220 para impresoras de 58mm ---
+                    pdFisico.DefaultPageSettings.PaperSize = new PaperSize("TicketTermico", 220, 800);
                     pdFisico.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
 
-                    // Al no asignar PrinterName, usa la impresora por defecto de Windows
                     pdFisico.PrintPage += new PrintPageEventHandler(GenerarDiseñoTicketImpresora);
                     pdFisico.Print();
                 }
@@ -783,40 +785,50 @@ namespace PuntoDeVentaFerrePau
         // =========================================================================================
         // --- 2. DISEÑO PARA LA IMPRESORA TÉRMICA FÍSICA (Centrado y Limpio) ---
         // =========================================================================================
+        // =========================================================================================
+        // --- DISEÑO PARA LA IMPRESORA TÉRMICA DE 58mm (Centrado y Limpio) ---
+        // =========================================================================================
+        // =========================================================================================
+        // --- DISEÑO PARA LA IMPRESORA TÉRMICA DE 58mm (Ajuste Perfecto) ---
+        // =========================================================================================
         private void GenerarDiseñoTicketImpresora(object sender, PrintPageEventArgs e)
         {
             Graphics g = e.Graphics;
 
-            System.Drawing.Font fontTitulo = new System.Drawing.Font("Arial", 16, FontStyle.Bold);
-            System.Drawing.Font fontNormal = new System.Drawing.Font("Arial", 10);
-            System.Drawing.Font fontNegrita = new System.Drawing.Font("Arial", 10, FontStyle.Bold);
-            System.Drawing.Font fontCursiva = new System.Drawing.Font("Arial", 9, FontStyle.Italic);
+            System.Drawing.Font fontTitulo = new System.Drawing.Font("Arial", 12, FontStyle.Bold);
+            System.Drawing.Font fontNormal = new System.Drawing.Font("Arial", 8);
+            System.Drawing.Font fontNegrita = new System.Drawing.Font("Arial", 8, FontStyle.Bold);
+            System.Drawing.Font fontCursiva = new System.Drawing.Font("Arial", 8, FontStyle.Italic);
 
-            int y = 20;
-            int ancho = 280;
+            int y = 10;
+            // Margen izquierdo
+            int x = 5;
+
+            // --- CORRECCIÓN FINAL: Reducimos a 175 para dar un margen seguro a la derecha ---
+            int ancho = 175;
 
             StringFormat formatoCentro = new StringFormat { Alignment = StringAlignment.Center };
             StringFormat formatoDerecha = new StringFormat { Alignment = StringAlignment.Far };
 
-            g.DrawString($"Folio: {ultimoFolio}", fontNormal, Brushes.Black, new PointF(10, y));
-            g.DrawString(DateTime.Now.ToString("dd/MM/yyyy"), fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoDerecha);
-            y += 35;
-
-            g.DrawString("FERRE-PAU", fontTitulo, Brushes.Black, new RectangleF(10, y, ancho, 25), formatoCentro);
+            g.DrawString($"Folio: {ultimoFolio}", fontNormal, Brushes.Black, new PointF(x, y));
+            g.DrawString(DateTime.Now.ToString("dd/MM/yyyy"), fontNormal, Brushes.Black, new RectangleF(x, y, ancho, 20), formatoDerecha);
             y += 25;
-            g.DrawString("Calle Vicente Guerrero", fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoCentro);
-            y += 20;
-            g.DrawString("HERIBERTO ADAME MEZA", fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoCentro);
-            y += 20;
-            g.DrawString("RFC: AAMH8807069RA", fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoCentro);
-            y += 20;
-            g.DrawString("TEL: 871-144-0669", fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoCentro);
-            y += 40;
 
-            g.DrawString("C", fontNegrita, Brushes.Black, new PointF(10, y));
-            g.DrawString("Descripción", fontNegrita, Brushes.Black, new PointF(40, y));
-            g.DrawString("T", fontNegrita, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoDerecha);
+            g.DrawString("FERRE-PAU", fontTitulo, Brushes.Black, new RectangleF(x, y, ancho, 25), formatoCentro);
             y += 20;
+            g.DrawString("Calle Vicente Guerrero", fontNormal, Brushes.Black, new RectangleF(x, y, ancho, 15), formatoCentro);
+            y += 15;
+            g.DrawString("HERIBERTO ADAME MEZA", fontNormal, Brushes.Black, new RectangleF(x, y, ancho, 15), formatoCentro);
+            y += 15;
+            g.DrawString("RFC: AAMH8807069RA", fontNormal, Brushes.Black, new RectangleF(x, y, ancho, 15), formatoCentro);
+            y += 15;
+            g.DrawString("TEL: 871-144-0669", fontNormal, Brushes.Black, new RectangleF(x, y, ancho, 15), formatoCentro);
+            y += 30;
+
+            g.DrawString("C", fontNegrita, Brushes.Black, new PointF(x, y));
+            g.DrawString("Descripción", fontNegrita, Brushes.Black, new PointF(x + 20, y));
+            g.DrawString("T", fontNegrita, Brushes.Black, new RectangleF(x, y, ancho, 15), formatoDerecha);
+            y += 15;
 
             foreach (DataGridViewRow fila in dgvCarrito.Rows)
             {
@@ -824,31 +836,32 @@ namespace PuntoDeVentaFerrePau
                 string desc = fila.Cells[1].Value.ToString();
                 string totalFila = fila.Cells[4].Value.ToString().Replace("$", "").Trim();
 
-                if (desc.Length > 20)
+                // Cortamos a los 14 caracteres para que no choque con los precios
+                if (desc.Length > 14)
                 {
-                    g.DrawString(cant, fontNormal, Brushes.Black, new PointF(10, y));
-                    g.DrawString(desc.Substring(0, 20), fontNormal, Brushes.Black, new PointF(40, y));
-                    g.DrawString(totalFila, fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoDerecha);
-                    y += 20;
-                    g.DrawString(desc.Substring(20), fontNormal, Brushes.Black, new PointF(40, y));
+                    g.DrawString(cant, fontNormal, Brushes.Black, new PointF(x, y));
+                    g.DrawString(desc.Substring(0, 14), fontNormal, Brushes.Black, new PointF(x + 20, y));
+                    g.DrawString(totalFila, fontNormal, Brushes.Black, new RectangleF(x, y, ancho, 15), formatoDerecha);
+                    y += 15;
+                    g.DrawString(desc.Substring(14), fontNormal, Brushes.Black, new PointF(x + 20, y));
                 }
                 else
                 {
-                    g.DrawString(cant, fontNormal, Brushes.Black, new PointF(10, y));
-                    g.DrawString(desc, fontNormal, Brushes.Black, new PointF(40, y));
-                    g.DrawString(totalFila, fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoDerecha);
+                    g.DrawString(cant, fontNormal, Brushes.Black, new PointF(x, y));
+                    g.DrawString(desc, fontNormal, Brushes.Black, new PointF(x + 20, y));
+                    g.DrawString(totalFila, fontNormal, Brushes.Black, new RectangleF(x, y, ancho, 15), formatoDerecha);
                 }
-                y += 25;
+                y += 18;
             }
 
             y += 10;
             string textoTotal = lblTotal.Text;
-            g.DrawString($"Total: {textoTotal}", fontNegrita, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoDerecha);
-            y += 40;
+            g.DrawString($"Total: {textoTotal}", fontNegrita, Brushes.Black, new RectangleF(x, y, ancho, 15), formatoDerecha);
+            y += 25;
 
-            g.DrawString("¡Gracias por su compra!", fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoCentro);
-            y += 20;
-            g.DrawString("power for Isaac Romero :)", fontCursiva, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoCentro);
+            g.DrawString("¡Gracias por su compra!", fontNormal, Brushes.Black, new RectangleF(x, y, ancho, 15), formatoCentro);
+            y += 15;
+            g.DrawString("power for Isaac Romero :)", fontCursiva, Brushes.Black, new RectangleF(x, y, ancho, 15), formatoCentro);
         }
 
         // --- MÉTODOS PARA EL CORTE DE CAJA (F10) ---
@@ -977,6 +990,7 @@ namespace PuntoDeVentaFerrePau
             g.DrawString("Firma del Cajero", fontNormal, Brushes.Black, new PointF(x + 45, y));
         }
 
+        // --- NUEVO MÉTODO PARA REIMPRIMIR EL ÚLTIMO TICKET (IMPRESIÓN DIRECTA) ---
         private void BtnReimprimirUltimo_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(ultimoFolio))
@@ -994,16 +1008,22 @@ namespace PuntoDeVentaFerrePau
             {
                 try
                 {
+                    // Configuramos el proceso para que imprima directamente en silencio
                     System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo
                     {
                         FileName = rutaArchivo,
+                        Verb = "print", // <-- Esta es la palabra mágica para imprimir directo
+                        CreateNoWindow = true,
+                        WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
                         UseShellExecute = true
                     };
                     System.Diagnostics.Process.Start(psi);
+
+                    MessageBox.Show("El último ticket se está enviando a la impresora.", "Imprimiendo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"No se pudo abrir el archivo. Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Revisa la conexión de tu impresora. Error: {ex.Message}", "Error de Impresión", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             else
