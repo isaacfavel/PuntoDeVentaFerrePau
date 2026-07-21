@@ -261,8 +261,7 @@ namespace PuntoDeVentaFerrePau
                         ultimoFolio = idVentaBD;
                         await ActualizarInventarioSupabase();
 
-                        MessageBox.Show($"Cambio a entregar: $ {ventanaCobro.CambioEntregar:F2}", "Venta Exitosa", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
+                        
                         ImprimirYGuardarTicket(ultimoFolio, ventanaCobro.ImprimirTicket);
 
                         dgvCarrito.Rows.Clear();
