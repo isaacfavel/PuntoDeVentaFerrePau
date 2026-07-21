@@ -51,7 +51,9 @@ namespace PuntoDeVentaFerrePau
 
         private void AplicarTemaFerrePau()
         {
-            this.Icon = Properties.Resources.iconoLogo;// --- NUEVA PALETA DE COLORES (ESTILO APP MÓVIL) ---
+            this.Icon = Properties.Resources.iconoLogo;
+
+            // --- NUEVA PALETA DE COLORES (ESTILO APP MÓVIL) ---
             Color fondoApp = Color.FromArgb(244, 246, 249);       // Fondo gris/azul muy claro
             Color azulMarino = Color.FromArgb(32, 54, 97);        // Azul oscuro para títulos
             Color naranjaFerre = Color.FromArgb(244, 114, 22);    // Naranja de los botones
@@ -138,10 +140,10 @@ namespace PuntoDeVentaFerrePau
             dgvCarrito.ColumnHeadersDefaultCellStyle.Font = new System.Drawing.Font("Arial", 12, FontStyle.Bold);
             dgvCarrito.ColumnHeadersDefaultCellStyle.SelectionBackColor = azulMarino;
 
-            // Filas blancas con texto oscuro
+            // Filas blancas con texto oscuro EN NEGRITAS
             dgvCarrito.DefaultCellStyle.BackColor = blancoCard;
             dgvCarrito.DefaultCellStyle.ForeColor = textoOscuro;
-            dgvCarrito.DefaultCellStyle.Font = new System.Drawing.Font("Arial", 11);
+            dgvCarrito.DefaultCellStyle.Font = new System.Drawing.Font("Arial", 11, FontStyle.Bold);
 
             // Filas alternas con un gris súper clarito para leer mejor
             dgvCarrito.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248);
@@ -174,9 +176,8 @@ namespace PuntoDeVentaFerrePau
             dgvCarrito.AllowUserToDeleteRows = false;
 
             // --- MAGIA PARA LOS ANCHOS DE COLUMNAS ---
-            // Le damos muchísimo más "peso" a la columna de Descripción
             dgvCarrito.Columns["Codigo"].FillWeight = 150;
-            dgvCarrito.Columns["Descripcion"].FillWeight = 450; // <--- Toma casi todo el espacio
+            dgvCarrito.Columns["Descripcion"].FillWeight = 450; // Descripción amplia
             dgvCarrito.Columns["Precio"].FillWeight = 100;
             dgvCarrito.Columns["Cantidad"].FillWeight = 90;
             dgvCarrito.Columns["Total"].FillWeight = 120;
@@ -224,7 +225,6 @@ namespace PuntoDeVentaFerrePau
                 e.Handled = true;
                 MoverSeleccionAbajo();
             }
-            // --- TECLAS PARA SUMAR Y RESTAR (+) y (-) ---
             else if ((e.KeyCode == Keys.Add || e.KeyCode == Keys.Oemplus) && string.IsNullOrEmpty(txtCodigo.Text.Trim()))
             {
                 e.SuppressKeyPress = true;
@@ -235,7 +235,6 @@ namespace PuntoDeVentaFerrePau
                 e.SuppressKeyPress = true;
                 CambiarCantidadSeleccionada(-1);
             }
-
             // --- F12: COBRAR VENTA ---
             else if (e.KeyCode == Keys.F12)
             {
@@ -256,54 +255,41 @@ namespace PuntoDeVentaFerrePau
 
                     if (ventanaCobro.PagoConfirmado)
                     {
-                        // 1. REGISTRAMOS LA VENTA EN SUPABASE Y OBTENEMOS EL FOLIO REAL
                         string idVentaBD = await RegistrarVentaSupabase(totalExacto);
-
-                        // Si hubo error de internet o nube, detenemos todo para no causar un desastre
                         if (idVentaBD == "ERROR") return;
 
-                        // Guardamos el folio real (Ej. "44" o "4241")
                         ultimoFolio = idVentaBD;
-
-                        // 2. DESCONTAMOS LOS PRODUCTOS DEL INVENTARIO EN LA NUBE
                         await ActualizarInventarioSupabase();
 
                         MessageBox.Show($"Cambio a entregar: $ {ventanaCobro.CambioEntregar:F2}", "Venta Exitosa", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                        // 3. GENERAMOS Y GUARDAMOS EL TICKET (Ahora sí con el nombre correcto)
                         ImprimirYGuardarTicket(ultimoFolio, ventanaCobro.ImprimirTicket);
 
-                        // 4. LIMPIAMOS LA PANTALLA
                         dgvCarrito.Rows.Clear();
                         ActualizarTotalVenta();
                         txtCodigo.Focus();
                     }
                 }
             }
-            // --- NUEVO: TECLA F1 PARA AYUDA RÁPIDA ---
             else if (e.KeyCode == Keys.F1)
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;
                 FormAyuda ventanaAyuda = new FormAyuda();
                 ventanaAyuda.ShowDialog();
-
                 txtCodigo.Focus();
             }
-            // --- F2: AGREGAR ARTÍCULO COMÚN ---
             else if (e.KeyCode == Keys.F2)
             {
                 e.Handled = true;
                 FormArticuloComun ventanaComun = new FormArticuloComun();
                 ventanaComun.ShowDialog();
 
-                // Si el cajero llenó los datos y le dio al botón "Agregar"
                 if (ventanaComun.FueConfirmado)
                 {
                     string codigoGenerico = "COMUN-" + DateTime.Now.Ticks.ToString().Substring(10);
                     double totalImporte = ventanaComun.PrecioArticulo * ventanaComun.CantidadArticulo;
 
-                    // Agregamos la fila y guardamos el número de índice que le tocó
                     int index = dgvCarrito.Rows.Add(
                         codigoGenerico,
                         ventanaComun.NombreArticulo,
@@ -312,8 +298,6 @@ namespace PuntoDeVentaFerrePau
                         $"$ {totalImporte:F2}"
                     );
 
-                    // --- AQUÍ ESTÁ LA SOLUCIÓN ---
-                    // Limpiamos selecciones viejas, seleccionamos el nuevo renglón y lo hacemos visible
                     dgvCarrito.ClearSelection();
                     dgvCarrito.Rows[index].Selected = true;
                     dgvCarrito.FirstDisplayedScrollingRowIndex = index;
@@ -321,7 +305,6 @@ namespace PuntoDeVentaFerrePau
                     ActualizarTotalVenta();
                 }
             }
-            // --- TECLA F3 PARA BUSCAR POR NOMBRE ---
             else if (e.KeyCode == Keys.F3)
             {
                 e.Handled = true;
@@ -336,59 +319,47 @@ namespace PuntoDeVentaFerrePau
                     txtCodigo.Focus();
                 }
             }
-            // --- TECLA F4 PARA ALTA DE PRODUCTOS ---
             else if (e.KeyCode == Keys.F4)
             {
                 e.Handled = true;
                 FormAgregarProducto ventanaAgregar = new FormAgregarProducto();
                 ventanaAgregar.ShowDialog();
-
                 txtCodigo.Focus();
             }
-            // --- TECLA F5 PARA ACTUALIZAR PRECIOS O STOCK ---
             else if (e.KeyCode == Keys.F5)
             {
                 e.Handled = true;
                 FormModificarProducto ventanaModificar = new FormModificarProducto();
                 ventanaModificar.ShowDialog();
-
                 txtCodigo.Focus();
             }
-            // --- TECLA F6 PARA REPORTE DE INVENTARIO BAJO ---
             else if (e.KeyCode == Keys.F6)
             {
                 e.Handled = true;
                 FormInventarioBajo ventanaInventario = new FormInventarioBajo();
                 ventanaInventario.ShowDialog();
-
                 txtCodigo.Focus();
             }
-            // --- TECLA F7 PARA REIMPRIMIR TICKETS ---
             else if (e.KeyCode == Keys.F7)
             {
                 e.Handled = true;
                 FormReimprimirTicket ventanaReimprimir = new FormReimprimirTicket();
                 ventanaReimprimir.ShowDialog();
-
                 txtCodigo.Focus();
             }
-            // --- TECLA F8 PARA HISTORIAL DE VENTAS ---
             else if (e.KeyCode == Keys.F8)
             {
                 e.Handled = true;
                 FormHistorialVentas ventanaHistorial = new FormHistorialVentas();
                 ventanaHistorial.ShowDialog();
-
                 txtCodigo.Focus();
             }
-            // --- F9: DAR DE BAJA PRODUCTO ---
             else if (e.KeyCode == Keys.F9)
             {
                 e.Handled = true;
                 FormDarDeBajaProducto ventanaBaja = new FormDarDeBajaProducto();
                 ventanaBaja.ShowDialog();
             }
-            // --- TECLA F10 PARA CORTE DE CAJA ---
             else if (e.KeyCode == Keys.F10)
             {
                 e.Handled = true;
@@ -544,10 +515,7 @@ namespace PuntoDeVentaFerrePau
                     return;
                 }
 
-                if (nuevaCantidad <= 0)
-                {
-                    return;
-                }
+                if (nuevaCantidad <= 0) return;
 
                 fila.Cells[3].Value = nuevaCantidad;
 
@@ -660,15 +628,11 @@ namespace PuntoDeVentaFerrePau
         // =========================================================================================
         private void ImprimirYGuardarTicket(string idVenta, bool imprimirFisico)
         {
-            // PASO A: MANDAR A LA IMPRESORA FÍSICA (SOLO SI ELIGIÓ "COBRAR CON TICKET")
-            // PASO A: MANDAR A LA IMPRESORA FÍSICA (SOLO SI ELIGIÓ "COBRAR CON TICKET")
             if (imprimirFisico)
             {
                 try
                 {
                     PrintDocument pdFisico = new PrintDocument();
-
-                    // --- CORRECCIÓN: Cambiamos 300 a 220 para impresoras de 58mm ---
                     pdFisico.DefaultPageSettings.PaperSize = new PaperSize("TicketTermico", 220, 800);
                     pdFisico.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
 
@@ -681,7 +645,6 @@ namespace PuntoDeVentaFerrePau
                 }
             }
 
-            // PASO B: GUARDAR EL ARCHIVO PDF USANDO iTextSharp (ESTO SE HACE SIEMPRE)
             try
             {
                 string rutaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -689,13 +652,11 @@ namespace PuntoDeVentaFerrePau
                 if (!Directory.Exists(rutaCarpeta)) Directory.CreateDirectory(rutaCarpeta);
                 string nombreArchivo = Path.Combine(rutaCarpeta, $"Ticket_{idVenta}.pdf");
 
-                // 1. Tamaño automático (180 pts de ancho = 58mm aprox), justo como en tu Java
                 iTextSharp.text.Rectangle pageSize = new iTextSharp.text.Rectangle(180, 1000);
                 Document doc = new Document(pageSize, 10, 10, 10, 10);
                 PdfWriter.GetInstance(doc, new FileStream(nombreArchivo, FileMode.Create));
                 doc.Open();
 
-                // 2. Fuentes iguales a tu Java
                 iTextSharp.text.Font tituloGrande = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 16, iTextSharp.text.Font.BOLD);
                 iTextSharp.text.Font tituloNormal = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 10, iTextSharp.text.Font.NORMAL);
                 iTextSharp.text.Font texto = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 10, iTextSharp.text.Font.NORMAL);
@@ -712,13 +673,11 @@ namespace PuntoDeVentaFerrePau
                     firma = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.TIMES_ROMAN, 9, iTextSharp.text.Font.ITALIC);
                 }
 
-                // 3. Folio y Fecha
                 Paragraph numCompra = new Paragraph($"Folio: {idVenta}                    {DateTime.Now.ToString("dd/MM/yyyy")}", texto);
                 numCompra.Alignment = Element.ALIGN_LEFT;
                 doc.Add(numCompra);
                 doc.Add(Chunk.NEWLINE);
 
-                // 4. Encabezado Centrado
                 Paragraph encabezado = new Paragraph();
                 encabezado.Alignment = Element.ALIGN_CENTER;
                 encabezado.Add(new Chunk("FERRE-PAU\n", tituloGrande));
@@ -726,7 +685,6 @@ namespace PuntoDeVentaFerrePau
                 doc.Add(encabezado);
                 doc.Add(Chunk.NEWLINE);
 
-                // Función auxiliar para dibujar celdas sin bordes
                 PdfPCell CrearCelda(string txt, iTextSharp.text.Font font, int alineacion)
                 {
                     PdfPCell celda = new PdfPCell(new Phrase(txt, font));
@@ -735,7 +693,6 @@ namespace PuntoDeVentaFerrePau
                     return celda;
                 }
 
-                // 5. Tabla de productos (3 columnas)
                 PdfPTable tabla = new PdfPTable(3);
                 tabla.WidthPercentage = 100;
                 tabla.SetWidths(new float[] { 15f, 75f, 35f });
@@ -748,7 +705,6 @@ namespace PuntoDeVentaFerrePau
                 {
                     string cantidad = fila.Cells[3].Value.ToString();
                     string descripcion = fila.Cells[1].Value.ToString();
-                    // Quitamos el signo de pesos igual que en tu foto
                     string totalFila = fila.Cells[4].Value.ToString().Replace("$", "").Trim();
 
                     tabla.AddCell(CrearCelda(cantidad, texto, Element.ALIGN_LEFT));
@@ -759,13 +715,11 @@ namespace PuntoDeVentaFerrePau
                 doc.Add(tabla);
                 doc.Add(Chunk.NEWLINE);
 
-                // 6. TOTAL A PAGAR
                 Paragraph totalTxt = new Paragraph($"Total: {lblTotal.Text}", negrita);
                 totalTxt.Alignment = Element.ALIGN_RIGHT;
                 doc.Add(totalTxt);
                 doc.Add(Chunk.NEWLINE);
 
-                // 7. Mensaje Final y Firma Personalizada
                 Paragraph gracias = new Paragraph("¡Gracias por su compra!", texto);
                 gracias.Alignment = Element.ALIGN_CENTER;
                 doc.Add(gracias);
@@ -783,13 +737,7 @@ namespace PuntoDeVentaFerrePau
         }
 
         // =========================================================================================
-        // --- 2. DISEÑO PARA LA IMPRESORA TÉRMICA FÍSICA (Centrado y Limpio) ---
-        // =========================================================================================
-        // =========================================================================================
-        // --- DISEÑO PARA LA IMPRESORA TÉRMICA DE 58mm (Centrado y Limpio) ---
-        // =========================================================================================
-        // =========================================================================================
-        // --- DISEÑO PARA LA IMPRESORA TÉRMICA DE 58mm (Ajuste Perfecto) ---
+        // --- 2. DISEÑO PARA LA IMPRESORA TÉRMICA DE 58mm (Ajuste Perfecto) ---
         // =========================================================================================
         private void GenerarDiseñoTicketImpresora(object sender, PrintPageEventArgs e)
         {
@@ -801,10 +749,7 @@ namespace PuntoDeVentaFerrePau
             System.Drawing.Font fontCursiva = new System.Drawing.Font("Arial", 8, FontStyle.Italic);
 
             int y = 10;
-            // Margen izquierdo
             int x = 5;
-
-            // --- CORRECCIÓN FINAL: Reducimos a 175 para dar un margen seguro a la derecha ---
             int ancho = 175;
 
             StringFormat formatoCentro = new StringFormat { Alignment = StringAlignment.Center };
@@ -836,7 +781,6 @@ namespace PuntoDeVentaFerrePau
                 string desc = fila.Cells[1].Value.ToString();
                 string totalFila = fila.Cells[4].Value.ToString().Replace("$", "").Trim();
 
-                // Cortamos a los 14 caracteres para que no choque con los precios
                 if (desc.Length > 14)
                 {
                     g.DrawString(cant, fontNormal, Brushes.Black, new PointF(x, y));
@@ -990,7 +934,6 @@ namespace PuntoDeVentaFerrePau
             g.DrawString("Firma del Cajero", fontNormal, Brushes.Black, new PointF(x + 45, y));
         }
 
-        // --- NUEVO MÉTODO PARA REIMPRIMIR EL ÚLTIMO TICKET (IMPRESIÓN DIRECTA) ---
         private void BtnReimprimirUltimo_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(ultimoFolio))
@@ -1008,11 +951,10 @@ namespace PuntoDeVentaFerrePau
             {
                 try
                 {
-                    // Configuramos el proceso para que imprima directamente en silencio
                     System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo
                     {
                         FileName = rutaArchivo,
-                        Verb = "print", // <-- Esta es la palabra mágica para imprimir directo
+                        Verb = "print",
                         CreateNoWindow = true,
                         WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
                         UseShellExecute = true
