@@ -5,6 +5,9 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using System.Drawing.Printing;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+using System.IO;
 
 namespace PuntoDeVentaFerrePau
 {
@@ -48,8 +51,7 @@ namespace PuntoDeVentaFerrePau
 
         private void AplicarTemaFerrePau()
         {
-            this.Icon = new Icon(@"C:\Users\chino\source\repos\PuntoDeVentaFerrePau\PuntoDeVentaFerrePau\logo1 (1).ico");
-            // --- NUEVA PALETA DE COLORES (ESTILO APP MÓVIL) ---
+            this.Icon = Properties.Resources.iconoLogo;// --- NUEVA PALETA DE COLORES (ESTILO APP MÓVIL) ---
             Color fondoApp = Color.FromArgb(244, 246, 249);       // Fondo gris/azul muy claro
             Color azulMarino = Color.FromArgb(32, 54, 97);        // Azul oscuro para títulos
             Color naranjaFerre = Color.FromArgb(244, 114, 22);    // Naranja de los botones
@@ -62,12 +64,12 @@ namespace PuntoDeVentaFerrePau
 
             // Etiquetas Superiores
             lblTitulo.Text = "FERRE PAU";
-            lblTitulo.Font = new Font("Arial", 40, FontStyle.Bold);
+            lblTitulo.Font = new System.Drawing.Font("Arial", 40, FontStyle.Bold);
             lblTitulo.ForeColor = azulMarino;
             lblTitulo.Location = new Point(20, 20);
 
             lblCajero.Text = "CAJERO: " + nombreCajeroActual.ToUpper();
-            lblCajero.Font = new Font("Arial", 12, FontStyle.Bold);
+            lblCajero.Font = new System.Drawing.Font("Arial", 12, FontStyle.Bold);
             lblCajero.ForeColor = textoGris;
             lblCajero.Location = new Point(this.ClientSize.Width - 300, 20);
             lblCajero.Anchor = AnchorStyles.Top | AnchorStyles.Right;
@@ -75,7 +77,7 @@ namespace PuntoDeVentaFerrePau
             // --- ETIQUETA ARRIBA DEL BUSCADOR ---
             Label lblInstruccionBuscar = new Label();
             lblInstruccionBuscar.Text = "CÓDIGO DE PRODUCTO (ESCANEADO O F3)";
-            lblInstruccionBuscar.Font = new Font("Arial", 9, FontStyle.Bold);
+            lblInstruccionBuscar.Font = new System.Drawing.Font("Arial", 9, FontStyle.Bold);
             lblInstruccionBuscar.ForeColor = textoGris;
             lblInstruccionBuscar.Location = new Point(20, 80);
             lblInstruccionBuscar.AutoSize = true;
@@ -84,7 +86,7 @@ namespace PuntoDeVentaFerrePau
             // Caja de texto (Buscador)
             txtCodigo.BackColor = blancoCard;
             txtCodigo.ForeColor = textoOscuro;
-            txtCodigo.Font = new Font("Arial", 18);
+            txtCodigo.Font = new System.Drawing.Font("Arial", 18);
             txtCodigo.BorderStyle = BorderStyle.FixedSingle;
             txtCodigo.Width = 500;
             txtCodigo.Location = new Point(20, 100);
@@ -93,7 +95,7 @@ namespace PuntoDeVentaFerrePau
             btnCobrar.Text = "F12 - COBRAR";
             btnCobrar.BackColor = naranjaFerre;
             btnCobrar.ForeColor = Color.White;
-            btnCobrar.Font = new Font("Arial", 16, FontStyle.Bold);
+            btnCobrar.Font = new System.Drawing.Font("Arial", 16, FontStyle.Bold);
             btnCobrar.FlatStyle = FlatStyle.Flat;
             btnCobrar.FlatAppearance.BorderSize = 0;
             btnCobrar.Size = new Size(200, 60);
@@ -102,7 +104,7 @@ namespace PuntoDeVentaFerrePau
 
             // --- TOTAL A PAGAR (NUEVO DISEÑO GIGANTE SIN LETRAS) ---
             lblTotal.Text = "$ 0.00";
-            lblTotal.Font = new Font("Arial", 48, FontStyle.Bold);
+            lblTotal.Font = new System.Drawing.Font("Arial", 48, FontStyle.Bold);
             lblTotal.ForeColor = azulMarino;
             lblTotal.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             lblTotal.AutoSize = true;
@@ -112,7 +114,7 @@ namespace PuntoDeVentaFerrePau
             btnReimprimirUltimo.Text = "REIMPRIMIR ÚLTIMO TICKET";
             btnReimprimirUltimo.BackColor = azulMarino;
             btnReimprimirUltimo.ForeColor = Color.White;
-            btnReimprimirUltimo.Font = new Font("Arial", 10, FontStyle.Bold);
+            btnReimprimirUltimo.Font = new System.Drawing.Font("Arial", 10, FontStyle.Bold);
             btnReimprimirUltimo.FlatStyle = FlatStyle.Flat;
             btnReimprimirUltimo.FlatAppearance.BorderSize = 0;
             btnReimprimirUltimo.Size = new Size(250, 40);
@@ -133,13 +135,13 @@ namespace PuntoDeVentaFerrePau
             // Cabeceras de la tabla en Azul Marino
             dgvCarrito.ColumnHeadersDefaultCellStyle.BackColor = azulMarino;
             dgvCarrito.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvCarrito.ColumnHeadersDefaultCellStyle.Font = new Font("Arial", 12, FontStyle.Bold);
+            dgvCarrito.ColumnHeadersDefaultCellStyle.Font = new System.Drawing.Font("Arial", 12, FontStyle.Bold);
             dgvCarrito.ColumnHeadersDefaultCellStyle.SelectionBackColor = azulMarino;
 
             // Filas blancas con texto oscuro
             dgvCarrito.DefaultCellStyle.BackColor = blancoCard;
             dgvCarrito.DefaultCellStyle.ForeColor = textoOscuro;
-            dgvCarrito.DefaultCellStyle.Font = new Font("Arial", 11);
+            dgvCarrito.DefaultCellStyle.Font = new System.Drawing.Font("Arial", 11);
 
             // Filas alternas con un gris súper clarito para leer mejor
             dgvCarrito.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248);
@@ -171,7 +173,16 @@ namespace PuntoDeVentaFerrePau
             dgvCarrito.MultiSelect = false;
             dgvCarrito.AllowUserToDeleteRows = false;
 
-            // --- NUEVO: FILAS MÁS ALTAS Y NÚMEROS CENTRADOS ---
+            // --- MAGIA PARA LOS ANCHOS DE COLUMNAS ---
+            // Le damos muchísimo más "peso" a la columna de Descripción
+            dgvCarrito.Columns["Codigo"].FillWeight = 150;
+            dgvCarrito.Columns["Descripcion"].FillWeight = 450; // <--- Toma casi todo el espacio
+            dgvCarrito.Columns["Precio"].FillWeight = 100;
+            dgvCarrito.Columns["Cantidad"].FillWeight = 90;
+            dgvCarrito.Columns["Total"].FillWeight = 120;
+            dgvCarrito.Columns["Stock"].FillWeight = 90;
+
+            // --- FILAS MÁS ALTAS Y NÚMEROS CENTRADOS ---
             dgvCarrito.RowTemplate.Height = 40;
             dgvCarrito.Columns["Precio"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             dgvCarrito.Columns["Cantidad"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
@@ -225,41 +236,47 @@ namespace PuntoDeVentaFerrePau
                 CambiarCantidadSeleccionada(-1);
             }
 
-            // --- TECLA F12 PARA COBRAR ---
+            // --- F12: COBRAR VENTA ---
             else if (e.KeyCode == Keys.F12)
             {
                 e.Handled = true;
-                if (totalVentaAcumulado > 0)
+
+                string textoMonto = lblTotal.Text.Replace("$", "").Trim();
+
+                if (double.TryParse(textoMonto, out double totalExacto))
                 {
-                    FormCobro ventanaCobro = new FormCobro(totalVentaAcumulado);
+                    if (totalExacto <= 0)
+                    {
+                        MessageBox.Show("Agrega al menos un producto para cobrar.", "Carrito Vacío", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    FormCobro ventanaCobro = new FormCobro(totalExacto);
                     ventanaCobro.ShowDialog();
 
                     if (ventanaCobro.PagoConfirmado)
                     {
-                        MessageBox.Show("Venta registrada correctamente.", "Éxito");
+                        // 1. REGISTRAMOS LA VENTA EN SUPABASE Y OBTENEMOS EL FOLIO REAL
+                        string idVentaBD = await RegistrarVentaSupabase(totalExacto);
 
+                        // Si hubo error de internet o nube, detenemos todo para no causar un desastre
+                        if (idVentaBD == "ERROR") return;
+
+                        // Guardamos el folio real (Ej. "44" o "4241")
+                        ultimoFolio = idVentaBD;
+
+                        // 2. DESCONTAMOS LOS PRODUCTOS DEL INVENTARIO EN LA NUBE
                         await ActualizarInventarioSupabase();
-                        string idNuevaVenta = await RegistrarVentaSupabase(totalVentaAcumulado);
 
-                        if (idNuevaVenta != "ERROR")
-                        {
-                            ultimoFolio = idNuevaVenta;
-                            // ... (tus otras asignaciones de variables)
+                        MessageBox.Show($"Cambio a entregar: $ {ventanaCobro.CambioEntregar:F2}", "Venta Exitosa", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                            // --- LA DECISIÓN DE LOS DOS BOTONES ---
-                            if (ventanaCobro.ImprimirTicket)
-                            {
-                                ImprimirYGuardarTicket(idNuevaVenta); // Imprime y guarda
-                            }
-                            else
-                            {
-                                GuardarTicketPDFSolo(idNuevaVenta);   // Solo guarda en la carpeta
-                            }
-                        }
+                        // 3. GENERAMOS Y GUARDAMOS EL TICKET (Ahora sí con el nombre correcto)
+                        ImprimirYGuardarTicket(ultimoFolio, ventanaCobro.ImprimirTicket);
 
+                        // 4. LIMPIAMOS LA PANTALLA
                         dgvCarrito.Rows.Clear();
-                        totalVentaAcumulado = 0;
-                        lblTotal.Text = "$ 0.00";
+                        ActualizarTotalVenta();
+                        txtCodigo.Focus();
                     }
                 }
             }
@@ -272,6 +289,33 @@ namespace PuntoDeVentaFerrePau
                 ventanaAyuda.ShowDialog();
 
                 txtCodigo.Focus();
+            }
+            // --- F2: AGREGAR ARTÍCULO COMÚN ---
+            else if (e.KeyCode == Keys.F2)
+            {
+                e.Handled = true;
+                FormArticuloComun ventanaComun = new FormArticuloComun();
+                ventanaComun.ShowDialog();
+
+                // Si el cajero llenó los datos y le dio al botón "Agregar"
+                if (ventanaComun.FueConfirmado)
+                {
+                    // Generamos un código inventado para que la tabla no marque error (ej. "COMUN-001")
+                    string codigoGenerico = "COMUN-" + DateTime.Now.Ticks.ToString().Substring(10);
+                    double totalImporte = ventanaComun.PrecioArticulo * ventanaComun.CantidadArticulo;
+
+                    // Aquí agregas la fila a tu tabla principal de ventas (Ajusta los índices según las columnas de tu carrito)
+                    dgvCarrito.Rows.Add(
+                        codigoGenerico,
+                        ventanaComun.NombreArticulo,
+                        $"$ {ventanaComun.PrecioArticulo:F2}",
+                        ventanaComun.CantidadArticulo,
+                        $"$ {totalImporte:F2}"
+                    );
+
+                    // Actualizas el total a cobrar en la pantalla
+                    ActualizarTotalVenta();
+                }
             }
             // --- TECLA F3 PARA BUSCAR POR NOMBRE ---
             else if (e.KeyCode == Keys.F3)
@@ -433,8 +477,7 @@ namespace PuntoDeVentaFerrePau
                             dgvCarrito.Rows[index].Selected = true;
                         }
 
-                        totalVentaAcumulado += precio;
-                        lblTotal.Text = $"$ {totalVentaAcumulado:F2}"; // Modificado sin letras
+                        ActualizarTotalVenta();
                     }
                 }
             }
@@ -464,13 +507,8 @@ namespace PuntoDeVentaFerrePau
                 int indexBorrar = dgvCarrito.SelectedRows[0].Index;
                 DataGridViewRow fila = dgvCarrito.SelectedRows[0];
 
-                double totalRestar = Convert.ToDouble(fila.Cells[4].Value.ToString().Replace("$", "").Trim());
-                totalVentaAcumulado -= totalRestar;
-                if (totalVentaAcumulado < 0) totalVentaAcumulado = 0;
-                lblTotal.Text = $"$ {totalVentaAcumulado:F2}"; // Modificado sin letras
-
                 dgvCarrito.Rows.Remove(fila);
-
+                ActualizarTotalVenta();
                 if (dgvCarrito.Rows.Count > 0)
                 {
                     int nuevoIndex = (indexBorrar > 0) ? indexBorrar - 1 : 0;
@@ -482,7 +520,6 @@ namespace PuntoDeVentaFerrePau
             }
         }
 
-        // MÉTODO PARA SUMAR O RESTAR CANTIDAD CON LAS TECLAS + Y -
         private void CambiarCantidadSeleccionada(int ajuste)
         {
             if (dgvCarrito.SelectedRows.Count > 0)
@@ -513,17 +550,7 @@ namespace PuntoDeVentaFerrePau
                 double nuevoTotalFila = nuevaCantidad * precioUnitario;
                 fila.Cells[4].Value = $"$ {nuevoTotalFila:F2}";
 
-                if (ajuste > 0)
-                {
-                    totalVentaAcumulado += precioUnitario;
-                }
-                else
-                {
-                    totalVentaAcumulado -= precioUnitario;
-                }
-
-                if (totalVentaAcumulado < 0) totalVentaAcumulado = 0;
-                lblTotal.Text = $"$ {totalVentaAcumulado:F2}"; // Modificado sin letras
+                ActualizarTotalVenta();
             }
         }
 
@@ -604,92 +631,220 @@ namespace PuntoDeVentaFerrePau
             return "ERROR";
         }
 
-        // MÉTODO QUE DISPARA LA IMPRESIÓN
-        private void ImprimirYGuardarTicket(string idVenta)
+        private void ActualizarTotalVenta()
         {
-            string rutaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            string rutaCarpeta = System.IO.Path.Combine(rutaDocumentos, "Tickets_FerrePau");
+            double totalVenta = 0;
 
-            if (!System.IO.Directory.Exists(rutaCarpeta))
+            foreach (DataGridViewRow fila in dgvCarrito.Rows)
             {
-                System.IO.Directory.CreateDirectory(rutaCarpeta);
+                if (fila.Cells[4].Value != null)
+                {
+                    string valorCelda = fila.Cells[4].Value.ToString();
+                    valorCelda = valorCelda.Replace("$", "").Replace(" ", "").Replace(",", "").Trim();
+
+                    if (double.TryParse(valorCelda, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double subtotal))
+                    {
+                        totalVenta += subtotal;
+                    }
+                }
+            }
+            lblTotal.Text = $"$ {totalVenta:F2}";
+        }
+
+        // =========================================================================================
+        // --- 1. MÉTODO MAESTRO PARA IMPRIMIR DIRECTO AL PAPEL Y GUARDAR PDF CON iTextSharp ---
+        // =========================================================================================
+        private void ImprimirYGuardarTicket(string idVenta, bool imprimirFisico)
+        {
+            // PASO A: MANDAR A LA IMPRESORA FÍSICA (SOLO SI ELIGIÓ "COBRAR CON TICKET")
+            if (imprimirFisico)
+            {
+                try
+                {
+                    PrintDocument pdFisico = new PrintDocument();
+                    pdFisico.DefaultPageSettings.PaperSize = new PaperSize("TicketTermico", 300, 600);
+                    pdFisico.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+
+                    // Al no asignar PrinterName, usa la impresora por defecto de Windows
+                    pdFisico.PrintPage += new PrintPageEventHandler(GenerarDiseñoTicketImpresora);
+                    pdFisico.Print();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Verifica tu miniprinter física. Error: {ex.Message}", "Error de Impresión", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
 
-            string nombreArchivo = System.IO.Path.Combine(rutaCarpeta, $"Ticket_{idVenta}.pdf");
-
-            PrintDocument pd = new PrintDocument();
-
-            pd.DefaultPageSettings.PaperSize = new PaperSize("TicketTermico", 300, 600);
-            pd.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
-
-            pd.PrintPage += new PrintPageEventHandler(GenerarDiseñoTicket);
-
+            // PASO B: GUARDAR EL ARCHIVO PDF USANDO iTextSharp (ESTO SE HACE SIEMPRE)
             try
             {
-                pd.PrinterSettings.PrinterName = "Microsoft Print to PDF";
-                pd.PrinterSettings.PrintToFile = true;
-                pd.PrinterSettings.PrintFileName = nombreArchivo;
+                string rutaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                string rutaCarpeta = Path.Combine(rutaDocumentos, "Tickets_FerrePau");
+                if (!Directory.Exists(rutaCarpeta)) Directory.CreateDirectory(rutaCarpeta);
+                string nombreArchivo = Path.Combine(rutaCarpeta, $"Ticket_{idVenta}.pdf");
 
-                pd.Print();
+                // 1. Tamaño automático (180 pts de ancho = 58mm aprox), justo como en tu Java
+                iTextSharp.text.Rectangle pageSize = new iTextSharp.text.Rectangle(180, 1000);
+                Document doc = new Document(pageSize, 10, 10, 10, 10);
+                PdfWriter.GetInstance(doc, new FileStream(nombreArchivo, FileMode.Create));
+                doc.Open();
+
+                // 2. Fuentes iguales a tu Java
+                iTextSharp.text.Font tituloGrande = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 16, iTextSharp.text.Font.BOLD);
+                iTextSharp.text.Font tituloNormal = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 10, iTextSharp.text.Font.NORMAL);
+                iTextSharp.text.Font texto = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 10, iTextSharp.text.Font.NORMAL);
+                iTextSharp.text.Font negrita = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.HELVETICA, 10, iTextSharp.text.Font.BOLD);
+
+                iTextSharp.text.Font firma;
+                try
+                {
+                    BaseFont bfCursiva = BaseFont.CreateFont(@"C:\Windows\Fonts\MTCORSVA.TTF", BaseFont.WINANSI, BaseFont.EMBEDDED);
+                    firma = new iTextSharp.text.Font(bfCursiva, 11);
+                }
+                catch
+                {
+                    firma = new iTextSharp.text.Font(iTextSharp.text.Font.FontFamily.TIMES_ROMAN, 9, iTextSharp.text.Font.ITALIC);
+                }
+
+                // 3. Folio y Fecha
+                Paragraph numCompra = new Paragraph($"Folio: {idVenta}                    {DateTime.Now.ToString("dd/MM/yyyy")}", texto);
+                numCompra.Alignment = Element.ALIGN_LEFT;
+                doc.Add(numCompra);
+                doc.Add(Chunk.NEWLINE);
+
+                // 4. Encabezado Centrado
+                Paragraph encabezado = new Paragraph();
+                encabezado.Alignment = Element.ALIGN_CENTER;
+                encabezado.Add(new Chunk("FERRE-PAU\n", tituloGrande));
+                encabezado.Add(new Chunk("Calle Vicente Guerrero\nHERIBERTO ADAME MEZA\nRFC: AAMH8807069RA\nTEL: 871-144-0669", tituloNormal));
+                doc.Add(encabezado);
+                doc.Add(Chunk.NEWLINE);
+
+                // Función auxiliar para dibujar celdas sin bordes
+                PdfPCell CrearCelda(string txt, iTextSharp.text.Font font, int alineacion)
+                {
+                    PdfPCell celda = new PdfPCell(new Phrase(txt, font));
+                    celda.Border = iTextSharp.text.Rectangle.NO_BORDER;
+                    celda.HorizontalAlignment = alineacion;
+                    return celda;
+                }
+
+                // 5. Tabla de productos (3 columnas)
+                PdfPTable tabla = new PdfPTable(3);
+                tabla.WidthPercentage = 100;
+                tabla.SetWidths(new float[] { 15f, 75f, 35f });
+
+                tabla.AddCell(CrearCelda("C", negrita, Element.ALIGN_LEFT));
+                tabla.AddCell(CrearCelda("Descripción", negrita, Element.ALIGN_LEFT));
+                tabla.AddCell(CrearCelda("T", negrita, Element.ALIGN_RIGHT));
+
+                foreach (DataGridViewRow fila in dgvCarrito.Rows)
+                {
+                    string cantidad = fila.Cells[3].Value.ToString();
+                    string descripcion = fila.Cells[1].Value.ToString();
+                    // Quitamos el signo de pesos igual que en tu foto
+                    string totalFila = fila.Cells[4].Value.ToString().Replace("$", "").Trim();
+
+                    tabla.AddCell(CrearCelda(cantidad, texto, Element.ALIGN_LEFT));
+                    tabla.AddCell(CrearCelda(descripcion, texto, Element.ALIGN_LEFT));
+                    tabla.AddCell(CrearCelda(totalFila, texto, Element.ALIGN_RIGHT));
+                }
+
+                doc.Add(tabla);
+                doc.Add(Chunk.NEWLINE);
+
+                // 6. TOTAL A PAGAR
+                Paragraph totalTxt = new Paragraph($"Total: {lblTotal.Text}", negrita);
+                totalTxt.Alignment = Element.ALIGN_RIGHT;
+                doc.Add(totalTxt);
+                doc.Add(Chunk.NEWLINE);
+
+                // 7. Mensaje Final y Firma Personalizada
+                Paragraph gracias = new Paragraph("¡Gracias por su compra!", texto);
+                gracias.Alignment = Element.ALIGN_CENTER;
+                doc.Add(gracias);
+
+                Paragraph creador = new Paragraph("power for Isaac Romero :)", firma);
+                creador.Alignment = Element.ALIGN_CENTER;
+                doc.Add(creador);
+
+                doc.Close();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"No se pudo guardar el PDF del ticket: {ex.Message}", "Error de Impresión", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Error generando PDF de respaldo: " + ex.Message, "Error iTextSharp", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
-        // MÉTODO QUE DIBUJA EL TICKET LÍNEA POR LÍNEA
-        private void GenerarDiseñoTicket(object sender, PrintPageEventArgs e)
+        // =========================================================================================
+        // --- 2. DISEÑO PARA LA IMPRESORA TÉRMICA FÍSICA (Centrado y Limpio) ---
+        // =========================================================================================
+        private void GenerarDiseñoTicketImpresora(object sender, PrintPageEventArgs e)
         {
             Graphics g = e.Graphics;
-            Font fontTitulo = new Font("Arial", 12, FontStyle.Bold);
-            Font fontNormal = new Font("Arial", 9);
-            Font fontNegrita = new Font("Arial", 9, FontStyle.Bold);
+
+            System.Drawing.Font fontTitulo = new System.Drawing.Font("Arial", 16, FontStyle.Bold);
+            System.Drawing.Font fontNormal = new System.Drawing.Font("Arial", 10);
+            System.Drawing.Font fontNegrita = new System.Drawing.Font("Arial", 10, FontStyle.Bold);
+            System.Drawing.Font fontCursiva = new System.Drawing.Font("Arial", 9, FontStyle.Italic);
 
             int y = 20;
-            int x = 10;
+            int ancho = 280;
 
-            g.DrawString("FERRE PAU", fontTitulo, Brushes.Black, new PointF(x + 60, y));
+            StringFormat formatoCentro = new StringFormat { Alignment = StringAlignment.Center };
+            StringFormat formatoDerecha = new StringFormat { Alignment = StringAlignment.Far };
+
+            g.DrawString($"Folio: {ultimoFolio}", fontNormal, Brushes.Black, new PointF(10, y));
+            g.DrawString(DateTime.Now.ToString("dd/MM/yyyy"), fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoDerecha);
+            y += 35;
+
+            g.DrawString("FERRE-PAU", fontTitulo, Brushes.Black, new RectangleF(10, y, ancho, 25), formatoCentro);
             y += 25;
+            g.DrawString("Calle Vicente Guerrero", fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoCentro);
+            y += 20;
+            g.DrawString("HERIBERTO ADAME MEZA", fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoCentro);
+            y += 20;
+            g.DrawString("RFC: AAMH8807069RA", fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoCentro);
+            y += 20;
+            g.DrawString("TEL: 871-144-0669", fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoCentro);
+            y += 40;
 
-            g.DrawString("Folio: " + ultimoFolio, fontNegrita, Brushes.Black, new PointF(x, y));
-            y += 20;
-
-            g.DrawString("Fecha: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm"), fontNormal, Brushes.Black, new PointF(x, y));
-            y += 20;
-            g.DrawString("Le atendió: " + lblCajero.Text.Replace("CAJERO: ", "").Trim(), fontNormal, Brushes.Black, new PointF(x, y));
-            y += 20;
-            g.DrawString("------------------------------------------------", fontNormal, Brushes.Black, new PointF(x, y));
-            y += 20;
-
-            g.DrawString("CANT   DESCRIPCIÓN            TOTAL", fontNegrita, Brushes.Black, new PointF(x, y));
+            g.DrawString("C", fontNegrita, Brushes.Black, new PointF(10, y));
+            g.DrawString("Descripción", fontNegrita, Brushes.Black, new PointF(40, y));
+            g.DrawString("T", fontNegrita, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoDerecha);
             y += 20;
 
             foreach (DataGridViewRow fila in dgvCarrito.Rows)
             {
                 string cant = fila.Cells[3].Value.ToString();
                 string desc = fila.Cells[1].Value.ToString();
-                string totalFila = fila.Cells[4].Value.ToString();
+                string totalFila = fila.Cells[4].Value.ToString().Replace("$", "").Trim();
 
-                if (desc.Length > 16) desc = desc.Substring(0, 16) + ".";
-
-                g.DrawString($"{cant}   {desc}", fontNormal, Brushes.Black, new PointF(x, y));
-                g.DrawString(totalFila, fontNormal, Brushes.Black, new PointF(x + 190, y));
-                y += 20;
+                if (desc.Length > 20)
+                {
+                    g.DrawString(cant, fontNormal, Brushes.Black, new PointF(10, y));
+                    g.DrawString(desc.Substring(0, 20), fontNormal, Brushes.Black, new PointF(40, y));
+                    g.DrawString(totalFila, fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoDerecha);
+                    y += 20;
+                    g.DrawString(desc.Substring(20), fontNormal, Brushes.Black, new PointF(40, y));
+                }
+                else
+                {
+                    g.DrawString(cant, fontNormal, Brushes.Black, new PointF(10, y));
+                    g.DrawString(desc, fontNormal, Brushes.Black, new PointF(40, y));
+                    g.DrawString(totalFila, fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoDerecha);
+                }
+                y += 25;
             }
 
             y += 10;
-            g.DrawString("------------------------------------------------", fontNormal, Brushes.Black, new PointF(x, y));
+            string textoTotal = lblTotal.Text;
+            g.DrawString($"Total: {textoTotal}", fontNegrita, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoDerecha);
+            y += 40;
+
+            g.DrawString("¡Gracias por su compra!", fontNormal, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoCentro);
             y += 20;
-            g.DrawString("TOTAL: $" + totalVentaAcumulado.ToString("F2"), fontTitulo, Brushes.Black, new PointF(x + 80, y));
-            y += 25;
-
-            g.DrawString("Efectivo: $" + ultimoPago.ToString("F2"), fontNormal, Brushes.Black, new PointF(x + 80, y));
-            y += 15;
-            g.DrawString("Cambio: $" + ultimoCambio.ToString("F2"), fontNormal, Brushes.Black, new PointF(x + 80, y));
-            y += 30;
-
-            g.DrawString("¡Gracias por su preferencia!", fontNormal, Brushes.Black, new PointF(x + 30, y));
+            g.DrawString("power for Isaac Romero :)", fontCursiva, Brushes.Black, new RectangleF(10, y, ancho, 20), formatoCentro);
         }
 
         // --- MÉTODOS PARA EL CORTE DE CAJA (F10) ---
@@ -752,19 +907,19 @@ namespace PuntoDeVentaFerrePau
             corteTickets = tickets;
             corteTotal = total;
 
-            System.Drawing.Printing.PrintDocument pdCorte = new System.Drawing.Printing.PrintDocument();
+            PrintDocument pdCorte = new PrintDocument();
 
-            pdCorte.DefaultPageSettings.PaperSize = new System.Drawing.Printing.PaperSize("TicketTermico", 300, 600);
-            pdCorte.DefaultPageSettings.Margins = new System.Drawing.Printing.Margins(0, 0, 0, 0);
+            pdCorte.DefaultPageSettings.PaperSize = new PaperSize("TicketTermico", 300, 600);
+            pdCorte.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
 
-            pdCorte.PrintPage += new System.Drawing.Printing.PrintPageEventHandler(GenerarDiseñoCorte);
+            pdCorte.PrintPage += new PrintPageEventHandler(GenerarDiseñoCorte);
 
             string rutaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            string rutaCarpeta = System.IO.Path.Combine(rutaDocumentos, "Tickets_FerrePau");
-            if (!System.IO.Directory.Exists(rutaCarpeta)) System.IO.Directory.CreateDirectory(rutaCarpeta);
+            string rutaCarpeta = Path.Combine(rutaDocumentos, "Tickets_FerrePau");
+            if (!Directory.Exists(rutaCarpeta)) Directory.CreateDirectory(rutaCarpeta);
 
             string fechaArchivo = fecha.Replace("/", "-");
-            string nombreArchivo = System.IO.Path.Combine(rutaCarpeta, $"CorteCaja_{fechaArchivo}.pdf");
+            string nombreArchivo = Path.Combine(rutaCarpeta, $"CorteCaja_{fechaArchivo}.pdf");
 
             try
             {
@@ -781,12 +936,12 @@ namespace PuntoDeVentaFerrePau
             }
         }
 
-        private void GenerarDiseñoCorte(object sender, System.Drawing.Printing.PrintPageEventArgs e)
+        private void GenerarDiseñoCorte(object sender, PrintPageEventArgs e)
         {
             Graphics g = e.Graphics;
-            Font fontTitulo = new Font("Arial", 14, FontStyle.Bold);
-            Font fontNormal = new Font("Arial", 10);
-            Font fontNegrita = new Font("Arial", 10, FontStyle.Bold);
+            System.Drawing.Font fontTitulo = new System.Drawing.Font("Arial", 14, FontStyle.Bold);
+            System.Drawing.Font fontNormal = new System.Drawing.Font("Arial", 10);
+            System.Drawing.Font fontNegrita = new System.Drawing.Font("Arial", 10, FontStyle.Bold);
 
             int y = 20;
             int x = 10;
@@ -810,7 +965,7 @@ namespace PuntoDeVentaFerrePau
             y += 40;
             g.DrawString("TOTAL EN CAJA:", fontNegrita, Brushes.Black, new PointF(x, y));
             y += 25;
-            g.DrawString("$ " + corteTotal.ToString("F2"), new Font("Arial", 18, FontStyle.Bold), Brushes.Black, new PointF(x + 40, y));
+            g.DrawString("$ " + corteTotal.ToString("F2"), new System.Drawing.Font("Arial", 18, FontStyle.Bold), Brushes.Black, new PointF(x + 40, y));
             y += 50;
 
             g.DrawString("------------------------------------------------", fontNormal, Brushes.Black, new PointF(x, y));
@@ -818,7 +973,6 @@ namespace PuntoDeVentaFerrePau
             g.DrawString("Firma del Cajero", fontNormal, Brushes.Black, new PointF(x + 45, y));
         }
 
-        // --- NUEVO MÉTODO PARA REIMPRIMIR EL ÚLTIMO TICKET ---
         private void BtnReimprimirUltimo_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(ultimoFolio))
@@ -829,10 +983,10 @@ namespace PuntoDeVentaFerrePau
             }
 
             string rutaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            string rutaCarpeta = System.IO.Path.Combine(rutaDocumentos, "Tickets_FerrePau");
-            string rutaArchivo = System.IO.Path.Combine(rutaCarpeta, $"Ticket_{ultimoFolio}.pdf");
+            string rutaCarpeta = Path.Combine(rutaDocumentos, "Tickets_FerrePau");
+            string rutaArchivo = Path.Combine(rutaCarpeta, $"Ticket_{ultimoFolio}.pdf");
 
-            if (System.IO.File.Exists(rutaArchivo))
+            if (File.Exists(rutaArchivo))
             {
                 try
                 {
@@ -854,29 +1008,6 @@ namespace PuntoDeVentaFerrePau
             }
 
             txtCodigo.Focus();
-        }
-        private void GuardarTicketPDFSolo(string idVenta)
-        {
-            // Esta parte es igual que tu método de impresión original
-            string rutaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            string rutaCarpeta = System.IO.Path.Combine(rutaDocumentos, "Tickets_FerrePau");
-            if (!System.IO.Directory.Exists(rutaCarpeta)) System.IO.Directory.CreateDirectory(rutaCarpeta);
-            string nombreArchivo = System.IO.Path.Combine(rutaCarpeta, $"Ticket_{idVenta}.pdf");
-
-            PrintDocument pd = new PrintDocument();
-            pd.DefaultPageSettings.PaperSize = new PaperSize("TicketTermico", 300, 600);
-            pd.PrintPage += new PrintPageEventHandler(GenerarDiseñoTicket);
-
-            try
-            {
-                pd.PrinterSettings.PrinterName = "Microsoft Print to PDF";
-                pd.PrinterSettings.PrintToFile = true;
-                pd.PrinterSettings.PrintFileName = nombreArchivo;
-                // --- AQUÍ LA DIFERENCIA ---
-                // Si no queremos diálogo de guardado, lo ejecutamos directo si el driver lo permite
-                pd.Print();
-            }
-            catch { /* Silencioso */ }
         }
     }
 }
