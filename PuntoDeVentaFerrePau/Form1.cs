@@ -300,12 +300,11 @@ namespace PuntoDeVentaFerrePau
                 // Si el cajero llenó los datos y le dio al botón "Agregar"
                 if (ventanaComun.FueConfirmado)
                 {
-                    // Generamos un código inventado para que la tabla no marque error (ej. "COMUN-001")
                     string codigoGenerico = "COMUN-" + DateTime.Now.Ticks.ToString().Substring(10);
                     double totalImporte = ventanaComun.PrecioArticulo * ventanaComun.CantidadArticulo;
 
-                    // Aquí agregas la fila a tu tabla principal de ventas (Ajusta los índices según las columnas de tu carrito)
-                    dgvCarrito.Rows.Add(
+                    // Agregamos la fila y guardamos el número de índice que le tocó
+                    int index = dgvCarrito.Rows.Add(
                         codigoGenerico,
                         ventanaComun.NombreArticulo,
                         $"$ {ventanaComun.PrecioArticulo:F2}",
@@ -313,7 +312,12 @@ namespace PuntoDeVentaFerrePau
                         $"$ {totalImporte:F2}"
                     );
 
-                    // Actualizas el total a cobrar en la pantalla
+                    // --- AQUÍ ESTÁ LA SOLUCIÓN ---
+                    // Limpiamos selecciones viejas, seleccionamos el nuevo renglón y lo hacemos visible
+                    dgvCarrito.ClearSelection();
+                    dgvCarrito.Rows[index].Selected = true;
+                    dgvCarrito.FirstDisplayedScrollingRowIndex = index;
+
                     ActualizarTotalVenta();
                 }
             }
