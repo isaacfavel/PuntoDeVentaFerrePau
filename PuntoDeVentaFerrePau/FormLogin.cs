@@ -34,8 +34,7 @@ namespace PuntoDeVentaFerrePau
 
         private void ConfigurarPantalla()
         {
-            this.Icon = new Icon(@"C:\Users\chino\source\repos\PuntoDeVentaFerrePau\PuntoDeVentaFerrePau\logo1 (1).ico");
-            this.Size = new Size(380, 600);
+            this.Icon = Properties.Resources.iconoLogo; this.Size = new Size(380, 600);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = fondoApp;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;

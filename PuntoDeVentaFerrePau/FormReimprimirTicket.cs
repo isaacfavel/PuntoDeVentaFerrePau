@@ -29,7 +29,7 @@ namespace PuntoDeVentaFerrePau
             Color naranjaFerre = Color.FromArgb(244, 114, 22);
             Color textoOscuro = Color.FromArgb(40, 40, 40);
 
-            this.Icon = new Icon(@"C:\Users\chino\source\repos\PuntoDeVentaFerrePau\PuntoDeVentaFerrePau\logo1 (1).ico");
+            this.Icon = Properties.Resources.iconoLogo;
             // Hacemos la ventana mucho más grande (como un ticket largo)
             this.Size = new Size(600, 750);
             this.StartPosition = FormStartPosition.CenterParent;

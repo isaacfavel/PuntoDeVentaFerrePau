@@ -31,7 +31,7 @@ namespace PuntoDeVentaFerrePau
             Color rojoPeligro = Color.FromArgb(220, 53, 69); // Rojo para la baja
             Color textoOscuro = Color.FromArgb(40, 40, 40);
 
-            this.Icon = new Icon(@"C:\Users\chino\source\repos\PuntoDeVentaFerrePau\PuntoDeVentaFerrePau\logo1 (1).ico");
+            this.Icon = Properties.Resources.iconoLogo; 
             this.Size = new Size(500, 400); // Un poco más pequeña porque tiene menos campos
             this.StartPosition = FormStartPosition.CenterParent;
             this.BackColor = fondoApp;

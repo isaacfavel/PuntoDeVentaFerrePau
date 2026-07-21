@@ -31,7 +31,7 @@ namespace PuntoDeVentaFerrePau
             Color azulMarino = Color.FromArgb(32, 54, 97);
             Color textoOscuro = Color.FromArgb(40, 40, 40);
 
-            this.Icon = new Icon(@"C:\Users\chino\source\repos\PuntoDeVentaFerrePau\PuntoDeVentaFerrePau\logo1 (1).ico");
+            this.Icon = Properties.Resources.iconoLogo; 
             this.Size = new Size(750, 600);
             this.StartPosition = FormStartPosition.CenterParent;
             this.BackColor = fondoApp;

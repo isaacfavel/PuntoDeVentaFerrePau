@@ -41,7 +41,7 @@ namespace PuntoDeVentaFerrePau
             Color naranjaFerre = Color.FromArgb(244, 114, 22);
             Color textoOscuro = Color.FromArgb(40, 40, 40);
 
-            this.Icon = new Icon(@"C:\Users\chino\source\repos\PuntoDeVentaFerrePau\PuntoDeVentaFerrePau\logo1 (1).ico");
+            this.Icon = Properties.Resources.iconoLogo; 
             this.Size = new Size(500, 550);
             this.StartPosition = FormStartPosition.CenterParent;
             this.BackColor = fondoApp; // Fondo claro

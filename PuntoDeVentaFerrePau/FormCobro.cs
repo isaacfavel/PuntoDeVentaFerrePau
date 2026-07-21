@@ -34,8 +34,7 @@ namespace PuntoDeVentaFerrePau
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.Text = "Cobrar Venta";
-            this.Icon = new Icon(@"C:\Users\chino\source\repos\PuntoDeVentaFerrePau\PuntoDeVentaFerrePau\logo1 (1).ico");
-
+            this.Icon = Properties.Resources.iconoLogo;
             // Total
             Label lblTotal = new Label { Text = $"TOTAL: $ {totalCobrar:F2}", Font = new Font("Arial", 24, FontStyle.Bold), ForeColor = azulMarino, Size = new Size(360, 50), Location = new Point(10, 20), TextAlign = ContentAlignment.MiddleCenter };
             this.Controls.Add(lblTotal);
