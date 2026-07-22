@@ -170,7 +170,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="logo1 %281%29.ico" />
-    <Content Include="logo1.png" />
+    <Content Include="logo1.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

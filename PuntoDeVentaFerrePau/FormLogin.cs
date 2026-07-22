@@ -50,7 +50,15 @@ namespace PuntoDeVentaFerrePau
             // Tu ruta exacta del logo
             try
             {
-                picLogo.Image = Image.FromFile(@"C:\Users\chino\source\repos\PuntoDeVentaFerrePau\PuntoDeVentaFerrePau\logo1.png");
+                try
+                {
+                    string rutaImagen = System.IO.Path.Combine(Application.StartupPath, "logo1.png");
+                    picLogo.Image = Image.FromFile(rutaImagen);
+                }
+                catch
+                {
+                    picLogo.BackColor = Color.LightGray;
+                }
             }
             catch
             {
