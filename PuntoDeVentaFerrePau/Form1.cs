@@ -53,18 +53,19 @@ namespace PuntoDeVentaFerrePau
         {
             this.Icon = Properties.Resources.iconoLogo;
 
-            // --- NUEVA PALETA DE COLORES (ESTILO APP MÓVIL) ---
-            Color fondoApp = Color.FromArgb(244, 246, 249);       // Fondo gris/azul muy claro
-            Color azulMarino = Color.FromArgb(32, 54, 97);        // Azul oscuro para títulos
-            Color naranjaFerre = Color.FromArgb(244, 114, 22);    // Naranja de los botones
-            Color blancoCard = Color.White;                       // Blanco para las cajas de texto
-            Color textoGris = Color.FromArgb(120, 120, 120);      // Gris para textos secundarios
-            Color textoOscuro = Color.FromArgb(40, 40, 40);       // Casi negro para lo que se escribe
+            // --- MAGIA PARA EL FOCUS GLOBAL ---
+            this.KeyPreview = true;
+            this.KeyDown += Form1_KeyDown_Global;
 
-            // Aplicamos el fondo claro a toda la ventana
+            Color fondoApp = Color.FromArgb(244, 246, 249);
+            Color azulMarino = Color.FromArgb(32, 54, 97);
+            Color naranjaFerre = Color.FromArgb(244, 114, 22);
+            Color blancoCard = Color.White;
+            Color textoGris = Color.FromArgb(120, 120, 120);
+            Color textoOscuro = Color.FromArgb(40, 40, 40);
+
             this.BackColor = fondoApp;
 
-            // Etiquetas Superiores
             lblTitulo.Text = "FERRE PAU";
             lblTitulo.Font = new System.Drawing.Font("Arial", 40, FontStyle.Bold);
             lblTitulo.ForeColor = azulMarino;
@@ -76,24 +77,70 @@ namespace PuntoDeVentaFerrePau
             lblCajero.Location = new Point(this.ClientSize.Width - 300, 20);
             lblCajero.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 
-            // --- ETIQUETA ARRIBA DEL BUSCADOR ---
+            // =========================================================================
+            // --- MENÚ SUPERIOR DE BOTONES ---
+            // =========================================================================
+            FlowLayoutPanel panelMenu = new FlowLayoutPanel();
+            panelMenu.Location = new Point(20, 85);
+            panelMenu.Size = new Size(this.ClientSize.Width - 40, 50);
+            panelMenu.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this.Controls.Add(panelMenu);
+
+            void AgregarBotonMenu(string texto, Keys tecla)
+            {
+                Button btn = new Button();
+                btn.Text = texto;
+                btn.BackColor = azulMarino;
+                btn.ForeColor = Color.White;
+                btn.Font = new System.Drawing.Font("Arial", 9, FontStyle.Bold);
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 0;
+
+                btn.AutoSize = true;
+                btn.MinimumSize = new Size(110, 40);
+                btn.Height = 40;
+                btn.Margin = new Padding(0, 0, 8, 0);
+                btn.Cursor = Cursors.Hand;
+                btn.TabStop = false;
+
+                // --- MATAR EL BORDE FEO DE WINDOWS EN EL F1 ---
+                btn.NotifyDefault(false);
+
+                btn.Click += (s, ev) =>
+                {
+                    txtCodigo_KeyDown(txtCodigo, new KeyEventArgs(tecla));
+                    txtCodigo.Focus();
+                };
+                panelMenu.Controls.Add(btn);
+            }
+
+            //AgregarBotonMenu("F1 - AYUDA", Keys.F1);
+            AgregarBotonMenu("F2 - COMÚN", Keys.F2);
+            AgregarBotonMenu("F3 - BUSCAR", Keys.F3);
+            AgregarBotonMenu("F4 - ALTA", Keys.F4);
+            AgregarBotonMenu("F5 - MODIFICAR", Keys.F5);
+            AgregarBotonMenu("F6 - INV. BAJO", Keys.F6);
+            AgregarBotonMenu("F7 - TICKETS", Keys.F7);
+            AgregarBotonMenu("F8 - HISTORIAL", Keys.F8);
+            AgregarBotonMenu("F9 - BAJAS", Keys.F9);
+            AgregarBotonMenu("F10 - CORTE", Keys.F10);
+            AgregarBotonMenu("F11 - PDF", Keys.F11);
+
             Label lblInstruccionBuscar = new Label();
             lblInstruccionBuscar.Text = "CÓDIGO DE PRODUCTO (ESCANEADO O F3)";
             lblInstruccionBuscar.Font = new System.Drawing.Font("Arial", 9, FontStyle.Bold);
             lblInstruccionBuscar.ForeColor = textoGris;
-            lblInstruccionBuscar.Location = new Point(20, 80);
+            lblInstruccionBuscar.Location = new Point(20, 145);
             lblInstruccionBuscar.AutoSize = true;
             this.Controls.Add(lblInstruccionBuscar);
 
-            // Caja de texto (Buscador)
             txtCodigo.BackColor = blancoCard;
             txtCodigo.ForeColor = textoOscuro;
             txtCodigo.Font = new System.Drawing.Font("Arial", 18);
             txtCodigo.BorderStyle = BorderStyle.FixedSingle;
             txtCodigo.Width = 500;
-            txtCodigo.Location = new Point(20, 100);
+            txtCodigo.Location = new Point(20, 165);
 
-            // Botón Cobrar (F12) - Estilo Naranja
             btnCobrar.Text = "F12 - COBRAR";
             btnCobrar.BackColor = naranjaFerre;
             btnCobrar.ForeColor = Color.White;
@@ -103,8 +150,16 @@ namespace PuntoDeVentaFerrePau
             btnCobrar.Size = new Size(200, 60);
             btnCobrar.Location = new Point(this.ClientSize.Width - 220, this.ClientSize.Height - 80);
             btnCobrar.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnCobrar.TabStop = false;
+            btnCobrar.Cursor = Cursors.Hand;
+            btnCobrar.NotifyDefault(false);
 
-            // --- TOTAL A PAGAR (NUEVO DISEÑO GIGANTE SIN LETRAS) ---
+            btnCobrar.Click += (s, e) =>
+            {
+                txtCodigo_KeyDown(txtCodigo, new KeyEventArgs(Keys.F12));
+                txtCodigo.Focus();
+            };
+
             lblTotal.Text = "$ 0.00";
             lblTotal.Font = new System.Drawing.Font("Arial", 48, FontStyle.Bold);
             lblTotal.ForeColor = azulMarino;
@@ -112,7 +167,6 @@ namespace PuntoDeVentaFerrePau
             lblTotal.AutoSize = true;
             lblTotal.Location = new Point(btnCobrar.Left - 350, btnCobrar.Top - 10);
 
-            // --- CONFIGURACIÓN DEL BOTÓN DE REIMPRIMIR ÚLTIMO TICKET ---
             btnReimprimirUltimo.Text = "REIMPRIMIR ÚLTIMO TICKET";
             btnReimprimirUltimo.BackColor = azulMarino;
             btnReimprimirUltimo.ForeColor = Color.White;
@@ -122,6 +176,9 @@ namespace PuntoDeVentaFerrePau
             btnReimprimirUltimo.Size = new Size(250, 40);
             btnReimprimirUltimo.Location = new Point(20, this.ClientSize.Height - 60);
             btnReimprimirUltimo.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnReimprimirUltimo.TabStop = false;
+            btnReimprimirUltimo.Cursor = Cursors.Hand;
+            btnReimprimirUltimo.NotifyDefault(false);
             btnReimprimirUltimo.Click += BtnReimprimirUltimo_Click;
 
             if (!this.Controls.Contains(btnReimprimirUltimo))
@@ -129,34 +186,54 @@ namespace PuntoDeVentaFerrePau
                 this.Controls.Add(btnReimprimirUltimo);
             }
 
-            // --- DISEÑO DE LA TABLA ESTILO LIGHT ---
+            // --- DISEÑO DE LA TABLA ---
             dgvCarrito.BackgroundColor = fondoApp;
             dgvCarrito.BorderStyle = BorderStyle.None;
             dgvCarrito.EnableHeadersVisualStyles = false;
 
-            // Cabeceras de la tabla en Azul Marino
             dgvCarrito.ColumnHeadersDefaultCellStyle.BackColor = azulMarino;
             dgvCarrito.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgvCarrito.ColumnHeadersDefaultCellStyle.Font = new System.Drawing.Font("Arial", 12, FontStyle.Bold);
             dgvCarrito.ColumnHeadersDefaultCellStyle.SelectionBackColor = azulMarino;
 
-            // Filas blancas con texto oscuro EN NEGRITAS
             dgvCarrito.DefaultCellStyle.BackColor = blancoCard;
             dgvCarrito.DefaultCellStyle.ForeColor = textoOscuro;
             dgvCarrito.DefaultCellStyle.Font = new System.Drawing.Font("Arial", 11, FontStyle.Bold);
 
-            // Filas alternas con un gris súper clarito para leer mejor
             dgvCarrito.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248);
             dgvCarrito.RowHeadersVisible = false;
             dgvCarrito.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
 
-            dgvCarrito.Location = new Point(20, 160);
-            dgvCarrito.Size = new Size(this.ClientSize.Width - 40, this.ClientSize.Height - 260);
+            dgvCarrito.Location = new Point(20, 225);
+            dgvCarrito.Size = new Size(this.ClientSize.Width - 40, this.ClientSize.Height - 325);
             dgvCarrito.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 
-            // Color de selección
             dgvCarrito.DefaultCellStyle.SelectionBackColor = Color.FromArgb(255, 230, 210);
             dgvCarrito.DefaultCellStyle.SelectionForeColor = azulMarino;
+
+            // =========================================================================
+            // --- SOLUCIÓN AL FOCUS DE LA TABLA ---
+            // Si la tabla gana el foco (por un clic), mandamos el cursor de regreso al buscador
+            // =========================================================================
+            dgvCarrito.GotFocus += (s, e) =>
+            {
+                txtCodigo.Focus();
+            };
+        }
+
+        // =====================================================================================
+        // ESTO SOLUCIONA EL PROBLEMA DEL FOCUS: ATRAPA LAS TECLAS F DESDE CUALQUIER LADO
+        // =====================================================================================
+        private void Form1_KeyDown_Global(object sender, KeyEventArgs e)
+        {
+            // Si el usuario presiona una tecla entre F1 y F12, y el focus NO está en la caja de texto
+            if (e.KeyCode >= Keys.F1 && e.KeyCode <= Keys.F12 && !txtCodigo.Focused)
+            {
+                // Pasamos la tecla obligatoriamente al evento del buscador
+                txtCodigo_KeyDown(txtCodigo, e);
+                // Forzamos el focus de regreso
+                txtCodigo.Focus();
+            }
         }
 
         private void ConfigurarTabla()
@@ -175,15 +252,13 @@ namespace PuntoDeVentaFerrePau
             dgvCarrito.MultiSelect = false;
             dgvCarrito.AllowUserToDeleteRows = false;
 
-            // --- MAGIA PARA LOS ANCHOS DE COLUMNAS ---
             dgvCarrito.Columns["Codigo"].FillWeight = 150;
-            dgvCarrito.Columns["Descripcion"].FillWeight = 450; // Descripción amplia
+            dgvCarrito.Columns["Descripcion"].FillWeight = 450;
             dgvCarrito.Columns["Precio"].FillWeight = 100;
             dgvCarrito.Columns["Cantidad"].FillWeight = 90;
             dgvCarrito.Columns["Total"].FillWeight = 120;
             dgvCarrito.Columns["Stock"].FillWeight = 90;
 
-            // --- FILAS MÁS ALTAS Y NÚMEROS CENTRADOS ---
             dgvCarrito.RowTemplate.Height = 40;
             dgvCarrito.Columns["Precio"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             dgvCarrito.Columns["Cantidad"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
@@ -261,7 +336,8 @@ namespace PuntoDeVentaFerrePau
                         ultimoFolio = idVentaBD;
                         await ActualizarInventarioSupabase();
 
-                        
+                        MessageBox.Show($"Cambio a entregar: $ {ventanaCobro.CambioEntregar:F2}", "Venta Exitosa", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
                         ImprimirYGuardarTicket(ultimoFolio, ventanaCobro.ImprimirTicket);
 
                         dgvCarrito.Rows.Clear();
@@ -358,12 +434,22 @@ namespace PuntoDeVentaFerrePau
                 e.Handled = true;
                 FormDarDeBajaProducto ventanaBaja = new FormDarDeBajaProducto();
                 ventanaBaja.ShowDialog();
+                txtCodigo.Focus();
             }
             else if (e.KeyCode == Keys.F10)
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;
                 await RealizarCorteDeCaja();
+                txtCodigo.Focus();
+            }
+            else if (e.KeyCode == Keys.F11)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                FormAbrirPdf ventanaPdf = new FormAbrirPdf();
+                ventanaPdf.ShowDialog();
+                txtCodigo.Focus();
             }
         }
 

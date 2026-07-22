@@ -35,6 +35,10 @@ namespace PuntoDeVentaFerrePau
             this.MaximizeBox = false;
             this.Text = "Cobrar Venta";
             this.Icon = Properties.Resources.iconoLogo;
+
+            // MAGIA: Esto permite que la ventana intercepte las teclas F1 y F2 en todo momento
+            this.KeyPreview = true;
+
             // Total
             Label lblTotal = new Label { Text = $"TOTAL: $ {totalCobrar:F2}", Font = new Font("Arial", 24, FontStyle.Bold), ForeColor = azulMarino, Size = new Size(360, 50), Location = new Point(10, 20), TextAlign = ContentAlignment.MiddleCenter };
             this.Controls.Add(lblTotal);
@@ -45,7 +49,6 @@ namespace PuntoDeVentaFerrePau
 
             TextBox txtEfectivo = new TextBox { Name = "txtEfectivo", Font = new Font("Arial", 22, FontStyle.Bold), Size = new Size(340, 40), Location = new Point(20, 120), TextAlign = HorizontalAlignment.Right };
             txtEfectivo.TextChanged += TxtEfectivo_TextChanged;
-            txtEfectivo.KeyDown += (s, e) => { if (e.KeyCode == Keys.Escape) this.Close(); };
             this.Controls.Add(txtEfectivo);
 
             // Cambio
@@ -53,15 +56,40 @@ namespace PuntoDeVentaFerrePau
             this.Controls.Add(lblCambio);
 
             // --- BOTONES DE COBRO ---
-            Button btnConTicket = new Button { Text = "COBRAR CON TICKET", BackColor = naranjaFerre, ForeColor = Color.White, Font = new Font("Arial", 12, FontStyle.Bold), Size = new Size(340, 50), Location = new Point(20, 240), FlatStyle = FlatStyle.Flat };
+            Button btnConTicket = new Button { Text = "F1 - COBRAR e IMPRIMIR", BackColor = naranjaFerre, ForeColor = Color.White, Font = new Font("Arial", 12, FontStyle.Bold), Size = new Size(340, 50), Location = new Point(20, 240), FlatStyle = FlatStyle.Flat };
             btnConTicket.FlatAppearance.BorderSize = 0;
             btnConTicket.Click += (s, e) => { ImprimirTicket = true; ProcesarPago(txtEfectivo); };
             this.Controls.Add(btnConTicket);
 
-            Button btnSinTicket = new Button { Text = "COBRAR SIN TICKET", BackColor = azulMarino, ForeColor = Color.White, Font = new Font("Arial", 12, FontStyle.Bold), Size = new Size(340, 50), Location = new Point(20, 300), FlatStyle = FlatStyle.Flat };
+            Button btnSinTicket = new Button { Text = "F2 - SOLO COBRAR", BackColor = azulMarino, ForeColor = Color.White, Font = new Font("Arial", 12, FontStyle.Bold), Size = new Size(340, 50), Location = new Point(20, 300), FlatStyle = FlatStyle.Flat };
             btnSinTicket.FlatAppearance.BorderSize = 0;
             btnSinTicket.Click += (s, e) => { ImprimirTicket = false; ProcesarPago(txtEfectivo); };
             this.Controls.Add(btnSinTicket);
+
+            // --- EVENTOS DEL TECLADO PARA F1, F2 Y ESCAPE ---
+            this.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Escape)
+                {
+                    this.Close(); // Cierra si el cajero se arrepiente
+                }
+                else if (e.KeyCode == Keys.F1)
+                {
+                    e.Handled = true;
+                    btnConTicket.PerformClick(); // Simula un clic en el botón naranja
+                }
+                else if (e.KeyCode == Keys.F2)
+                {
+                    e.Handled = true;
+                    btnSinTicket.PerformClick(); // Simula un clic en el botón azul
+                }
+                // Si presionan Enter, vamos a forzarlos a elegir F1 o F2, o bien podrías poner 
+                // btnConTicket.PerformClick() aquí si quieres que Enter sea "Con Ticket" por defecto.
+                else if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                }
+            };
         }
 
         private void TxtEfectivo_TextChanged(object sender, EventArgs e)
@@ -74,6 +102,11 @@ namespace PuntoDeVentaFerrePau
                 lblCambio.Text = CambioEntregar >= 0 ? $"Cambio: $ {CambioEntregar:F2}" : "Falta dinero";
                 lblCambio.ForeColor = CambioEntregar >= 0 ? Color.Green : Color.Red;
             }
+            else if (string.IsNullOrWhiteSpace(txt.Text))
+            {
+                lblCambio.Text = "Cambio: $ 0.00";
+                lblCambio.ForeColor = Color.Green;
+            }
         }
 
         private void ProcesarPago(TextBox txt)
@@ -85,7 +118,8 @@ namespace PuntoDeVentaFerrePau
             }
             else
             {
-                MessageBox.Show("Efectivo insuficiente o inválido.");
+                MessageBox.Show("Efectivo insuficiente o inválido.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txt.Focus();
             }
         }
     }
