@@ -70,6 +70,12 @@
     <Compile Include="FormAbrirPdf.Designer.cs">
       <DependentUpon>FormAbrirPdf.cs</DependentUpon>
     </Compile>
+    <Compile Include="FormAgregarCliente.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormAgregarCliente.Designer.cs">
+      <DependentUpon>FormAgregarCliente.cs</DependentUpon>
+    </Compile>
     <Compile Include="FormAgregarProducto.cs">
       <SubType>Form</SubType>
     </Compile>

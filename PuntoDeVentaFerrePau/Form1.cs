@@ -30,8 +30,9 @@ namespace PuntoDeVentaFerrePau
         private int corteTickets = 0;
         private double corteTotal = 0.0;
 
-        // --- BOTÓN PARA REIMPRIMIR ÚLTIMO TICKET ---
+        // --- BOTÓN PARA REIMPRIMIR ÚLTIMO TICKET Y ALERTA TEMPORAL ---
         private Button btnReimprimirUltimo = new Button();
+        private Label lblAlertaTemp = new Label(); // <--- Etiqueta para el mensaje de 3 segundos
 
         // Guardamos el nombre del cajero que inició sesión
         private string nombreCajeroActual = "";
@@ -96,15 +97,26 @@ namespace PuntoDeVentaFerrePau
                 btn.FlatStyle = FlatStyle.Flat;
                 btn.FlatAppearance.BorderSize = 0;
 
-                btn.AutoSize = true;
-                btn.MinimumSize = new Size(110, 40);
-                btn.Height = 40;
+                btn.AutoSize = false;
+                btn.Size = new Size(115, 40);
                 btn.Margin = new Padding(0, 0, 8, 0);
                 btn.Cursor = Cursors.Hand;
                 btn.TabStop = false;
-
-                // --- MATAR EL BORDE FEO DE WINDOWS EN EL F1 ---
                 btn.NotifyDefault(false);
+
+                // --- MAGIA PARA ESQUINAS REDONDEADAS ---
+                btn.Paint += (s, ev) =>
+                {
+                    Button b = (Button)s;
+                    System.Drawing.Drawing2D.GraphicsPath camino = new System.Drawing.Drawing2D.GraphicsPath();
+                    int radio = 16;
+                    camino.AddArc(0, 0, radio, radio, 180, 90);
+                    camino.AddArc(b.Width - radio, 0, radio, radio, 270, 90);
+                    camino.AddArc(b.Width - radio, b.Height - radio, radio, radio, 0, 90);
+                    camino.AddArc(0, b.Height - radio, radio, radio, 90, 90);
+                    camino.CloseAllFigures();
+                    b.Region = new Region(camino);
+                };
 
                 btn.Click += (s, ev) =>
                 {
@@ -114,7 +126,7 @@ namespace PuntoDeVentaFerrePau
                 panelMenu.Controls.Add(btn);
             }
 
-            //AgregarBotonMenu("F1 - AYUDA", Keys.F1);
+            //AgregarBotonMenu("F1 - AYUDA", Keys.F1); // Oculto
             AgregarBotonMenu("F2 - COMÚN", Keys.F2);
             AgregarBotonMenu("F3 - BUSCAR", Keys.F3);
             AgregarBotonMenu("F4 - ALTA", Keys.F4);
@@ -140,6 +152,14 @@ namespace PuntoDeVentaFerrePau
             txtCodigo.BorderStyle = BorderStyle.FixedSingle;
             txtCodigo.Width = 500;
             txtCodigo.Location = new Point(20, 165);
+
+            // --- DISEÑO DE LA ALERTA TEMPORAL DE 3 SEGUNDOS ---
+            lblAlertaTemp.ForeColor = Color.Red;
+            lblAlertaTemp.Font = new System.Drawing.Font("Arial", 14, FontStyle.Bold);
+            lblAlertaTemp.Location = new Point(540, 168); // A un lado de la caja de búsqueda
+            lblAlertaTemp.AutoSize = true;
+            lblAlertaTemp.Visible = false; // Arranca invisible
+            this.Controls.Add(lblAlertaTemp);
 
             btnCobrar.Text = "F12 - COBRAR";
             btnCobrar.BackColor = naranjaFerre;
@@ -211,27 +231,17 @@ namespace PuntoDeVentaFerrePau
             dgvCarrito.DefaultCellStyle.SelectionBackColor = Color.FromArgb(255, 230, 210);
             dgvCarrito.DefaultCellStyle.SelectionForeColor = azulMarino;
 
-            // =========================================================================
-            // --- SOLUCIÓN AL FOCUS DE LA TABLA ---
-            // Si la tabla gana el foco (por un clic), mandamos el cursor de regreso al buscador
-            // =========================================================================
             dgvCarrito.GotFocus += (s, e) =>
             {
                 txtCodigo.Focus();
             };
         }
 
-        // =====================================================================================
-        // ESTO SOLUCIONA EL PROBLEMA DEL FOCUS: ATRAPA LAS TECLAS F DESDE CUALQUIER LADO
-        // =====================================================================================
         private void Form1_KeyDown_Global(object sender, KeyEventArgs e)
         {
-            // Si el usuario presiona una tecla entre F1 y F12, y el focus NO está en la caja de texto
             if (e.KeyCode >= Keys.F1 && e.KeyCode <= Keys.F12 && !txtCodigo.Focused)
             {
-                // Pasamos la tecla obligatoriamente al evento del buscador
                 txtCodigo_KeyDown(txtCodigo, e);
-                // Forzamos el focus de regreso
                 txtCodigo.Focus();
             }
         }
@@ -269,6 +279,15 @@ namespace PuntoDeVentaFerrePau
             {
                 columna.SortMode = DataGridViewColumnSortMode.NotSortable;
             }
+        }
+
+        // --- MÉTODO PARA MOSTRAR LA ALERTA DE 3 SEGUNDOS ---
+        private async void MostrarAlertaTemporal(string mensaje)
+        {
+            lblAlertaTemp.Text = mensaje;
+            lblAlertaTemp.Visible = true;
+            await Task.Delay(3000); // Espera 3 segundos (3000 milisegundos)
+            lblAlertaTemp.Visible = false; // Se vuelve a ocultar
         }
 
         private async void txtCodigo_KeyDown(object sender, KeyEventArgs e)
@@ -310,7 +329,6 @@ namespace PuntoDeVentaFerrePau
                 e.SuppressKeyPress = true;
                 CambiarCantidadSeleccionada(-1);
             }
-            // --- F12: COBRAR VENTA ---
             else if (e.KeyCode == Keys.F12)
             {
                 e.Handled = true;
@@ -335,8 +353,6 @@ namespace PuntoDeVentaFerrePau
 
                         ultimoFolio = idVentaBD;
                         await ActualizarInventarioSupabase();
-
-                        MessageBox.Show($"Cambio a entregar: $ {ventanaCobro.CambioEntregar:F2}", "Venta Exitosa", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                         ImprimirYGuardarTicket(ultimoFolio, ventanaCobro.ImprimirTicket);
 
@@ -505,7 +521,7 @@ namespace PuntoDeVentaFerrePau
 
                         if (stock <= 0)
                         {
-                            MessageBox.Show("¡Producto agotado!", "Alerta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            MostrarAlertaTemporal("¡PRODUCTO AGOTADO!");
                             return;
                         }
 
@@ -517,7 +533,7 @@ namespace PuntoDeVentaFerrePau
                                 int cantActual = Convert.ToInt32(fila.Cells[3].Value);
                                 if (cantActual + 1 > stock)
                                 {
-                                    MessageBox.Show("¡Stock insuficiente!", "Alerta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                    MostrarAlertaTemporal("¡STOCK INSUFICIENTE!");
                                     return;
                                 }
                                 fila.Cells[3].Value = cantActual + 1;
@@ -538,6 +554,11 @@ namespace PuntoDeVentaFerrePau
                         }
 
                         ActualizarTotalVenta();
+                    }
+                    else
+                    {
+                        // AQUÍ ES DONDE SE ACTIVA LA ALERTA SI NO EXISTE
+                        MostrarAlertaTemporal("¡PRODUCTO NO ENCONTRADO!");
                     }
                 }
             }
@@ -596,7 +617,7 @@ namespace PuntoDeVentaFerrePau
 
                 if (nuevaCantidad > stock)
                 {
-                    MessageBox.Show($"¡Stock insuficiente! Solo hay {stock} piezas disponibles.", "Alerta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MostrarAlertaTemporal("¡STOCK INSUFICIENTE!");
                     return;
                 }
 
